@@ -368,10 +368,30 @@ class TestLanguageToggle(unittest.TestCase):
                           self.markup)
 
     def test_the_indic_documents_embed_their_own_face(self):
+        # The document redefines the two font tokens the whole stylesheet
+        # reaches for, rather than naming elements -- naming elements had
+        # left h1 out, and the Gujarati title set in a system sans.
+        for code, face in (("hi", "Devanagari"), ("gu", "Gujarati")):
+            rule = re.search(rf"\.doc-{code} \{{ --serif:([^}}]*)\}}",
+                             self.html).group(1)
+            self.assertIn(f"'Noto Serif {face}'", rule)
+            self.assertIn(f"'Noto Sans {face}'", rule)
+            # The Latin stack stays behind the Indic face, which is what
+            # keeps the brand and the numerals in the brochure's serif.
+            self.assertIn("Palatino", rule)
+            # body resolved var(--serif) against the root token and passed
+            # the answer down, so the document has to ask again.
+            self.assertIn("font-family: var(--serif)", rule)
+        self.assertNotIn(".doc-en { --serif", self.html)
+
+    def test_the_indic_size_nudge_is_relative_to_the_body_not_the_root(self):
+        # rem is the root's 16px; the body sets 18px. In rem the nudge
+        # made the Indic documents smaller than the English one.
         for code in ("hi", "gu"):
-            self.assertIn(f".doc-{code} {{ font-family: 'Noto Serif",
-                          self.html, code)
-        self.assertNotIn(".doc-en { font-family:", self.html)
+            rule = re.search(rf"\.doc-{code} \{{ --serif:([^}}]*)\}}",
+                             self.html).group(1)
+            self.assertRegex(rule, r"font-size: 10[0-9]%")
+            self.assertNotIn("rem", rule)
 
     def test_indic_text_is_given_more_room_than_the_latin(self):
         for code in ("hi", "gu"):

@@ -7,6 +7,7 @@ SVG anchors that work with no JavaScript at all.
 """
 import html
 import os
+import re
 
 from build import assets, content, copy, fonts
 
@@ -277,7 +278,7 @@ footer img { width: 128px; margin-bottom: 18px; }
   background-size: cover;
   animation: settle 7s cubic-bezier(.2,.6,.2,1) both;
 }
-footer .shot { width: 128px; margin: 0 auto 18px; }
+footer .shot { width: 128px; margin-bottom: 18px; }
 
 /* A background does not print unless the page says so, and a brochure
    gets printed. */
@@ -467,6 +468,12 @@ def _shot(key: str, label: str, extra: str = "") -> str:
     return f'<div class="{cls}" role="img" aria-label="{_esc(label)}"></div>'
 
 
+def _token(name: str) -> str:
+    """One font stack as :root declares it, so it is written once."""
+    body = re.search(rf"--{name}:\s*([^;]+);", CSS, re.S).group(1)
+    return " ".join(body.split())
+
+
 def _locale_css() -> str:
     """Show one document; give the Indic ones room to breathe.
 
@@ -488,17 +495,27 @@ def _locale_css() -> str:
                      " outline-offset: 2px; }")
         if code != "en":
             rules.append(fonts.face_css(code))
+            # Redefine the two font tokens inside this document rather
+            # than naming elements: every rule in the stylesheet already
+            # reaches for var(--serif) or var(--sans), so one override
+            # reaches all of them and none can be missed. The Latin stack
+            # stays behind the Indic face, which is what keeps "Lake Tree
+            # Avenue" and the numerals in the brochure's own serif.
             rules.append(
-                f".doc-{code} {{ font-family: {fonts.stack(code, 'serif')};"
+                f".doc-{code} {{"
+                f" --serif: '{fonts.FACE_NAMES[fonts.PDF_FAMILIES[code]['serif']]}',"
+                f" {_token('serif')};"
+                f" --sans: '{fonts.FACE_NAMES[fonts.PDF_FAMILIES[code]['sans']]}',"
+                f" {_token('sans')};"
+                # body resolved var(--serif) against the root token and
+                # passed the answer down, so the document has to ask
+                # again for the override to reach its own text.
+                f" font-family: var(--serif);"
                 f" line-height: {fonts.LEADING[code]};"
-                f" font-size: {fonts.SCALE[code]}rem; }}")
-            sans = fonts.stack(code, "sans")
-            rules.append(
-                f".doc-{code} .lead, .doc-{code} h1, .doc-{code} h2,"
-                f" .doc-{code} h3, .doc-{code} dt, .doc-{code} th,"
-                f" .doc-{code} .btn, .doc-{code} .bar a,"
-                f" .doc-{code} .plan-tabs label"
-                f" {{ font-family: {sans}; }}")
+                # A percentage, not rem: rem is the root's 16px and would
+                # quietly set the Indic documents smaller than the 18px
+                # body they sit in, which is the opposite of the intent.
+                f" font-size: {round(fonts.SCALE[code] * 100)}%; }}")
         # The plan tabs are a second radio group, one per document, so
         # their ids cannot collide across the three.
         for tab in ("a", "b"):
