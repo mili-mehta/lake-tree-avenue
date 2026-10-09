@@ -27,6 +27,9 @@ class LayoutOverflow(RuntimeError):
 
 PAGE_SIZE = (842.0, 595.0)
 
+# The brochure's own date, not the moment of the build.
+BUILD_DATE = "D:20261009000000+05'30'"
+
 MARGIN = 54.0
 FOOTER_TOP = 543.0
 
@@ -382,6 +385,10 @@ def build_doc() -> fitz.Document:
         "title": content.PROJECT["name"],
         "author": content.PROJECT["developer"],
         "subject": "48 two-bedroom townhouses, Waghodia Main Road, Vadodara",
+        # Fixed dates keep successive builds byte-identical, so a rebuild
+        # does not rewrite dist/ and dirty the working tree.
+        "creationDate": BUILD_DATE,
+        "modDate": BUILD_DATE,
     })
     return doc
 
@@ -389,6 +396,6 @@ def build_doc() -> fitz.Document:
 def write(path: str) -> str:
     os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
     doc = build_doc()
-    doc.save(path, deflate=True, garbage=4)
+    doc.save(path, deflate=True, garbage=4, no_new_id=True)
     doc.close()
     return path
