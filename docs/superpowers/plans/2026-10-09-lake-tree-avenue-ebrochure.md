@@ -15,7 +15,11 @@
 - **No new dependencies.** Only Python 3.11 stdlib, `fitz` (PyMuPDF 1.28), `PIL` (Pillow 12.2). No pip installs, no network at build time or run time.
 - **Phone:** `+918758756666` in all `tel:`/`wa.me` URIs; displayed as `+91 87587 56666`.
 - **Email:** `laketreeavenue@gmail.com`
-- **Developer attribution:** `TAM Developers` only. Partners `Udit Talati & Kinjal Mehta`.
+- **Developer attribution:** the credit line is `A project by TAM Developers` and nothing
+  more. Partner names (Dhruv Talati, Shalin Talati, Kinjal Mehta) are an internal record
+  and must never appear in a buyer-facing artefact; `content.PRIVATE_NAMES` guards this,
+  including bare surnames, and `PROJECT` does not carry them at all so a renderer cannot
+  print one by accident.
 - **Site address:** `Lake Tree Avenue, Waghodia Main Road, next to Spunpipe & Construction Co., Kamlapura, Vadodara`
 - **Regd. office:** `1-B Ramkrishna Chambers, BPC Road, Alkapuri, Vadodara 390007`
 - **Forbidden strings** in any generated artefact (case-insensitive): `Leo Enterprise`, `RAA07983`, `RERA`, `Ajwa`, `Sikandarpura`, `The Palace`, `F.P. No. 42`, `3 BHK`, `A-TYPE 3`, `Pioneer Homoeopathic`, `22.71`.
