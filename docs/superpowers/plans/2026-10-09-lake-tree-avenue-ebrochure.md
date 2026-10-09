@@ -20,6 +20,7 @@
 - **Regd. office:** `1-B Ramkrishna Chambers, BPC Road, Alkapuri, Vadodara 390007`
 - **Forbidden strings** in any generated artefact (case-insensitive): `Leo Enterprise`, `RAA07983`, `RERA`, `Ajwa`, `Sikandarpura`, `The Palace`, `F.P. No. 42`, `3 BHK`, `A-TYPE 3`, `Pioneer Homoeopathic`, `22.71`.
 - **No price** anywhere. Enquiry CTAs read `Price on call`.
+- **Light backgrounds only.** No dark mode, no dark sections. The page declares `color-scheme: light` and keeps a white or warm off-white ground throughout, in both artefacts. Owner's explicit instruction; it overrides the usual dark-mode default.
 - **Unit mix:** 48 plots. Type A = plots 01–06. Type B = plots 07–48.
 - **Size budgets:** HTML ≤ 6 MB hard ceiling (4 MB target); PDF ≤ 8 MB.
 - **HTML self-containment:** zero external subresources; system font stack only.
@@ -819,7 +820,7 @@ git commit -m "feat: add image pipeline with letterbox trim and size budgets"
 - Consumes: `build.content`, `build.plots.hotspots`, `build.assets`
 - Produces: `render_html() -> str`, `write(path: str) -> str` (returns the path written)
 
-Design notes for the implementer: one `<style>` block, no scripts beyond a single inline `<script>` using only `document.querySelector` and `classList` — no `fetch`, no modules, no service worker, because the file is opened from `file://` on phones. The plot map is an `<svg viewBox="0 0 1000 1416">` layered over the layout image with `<a href>` wrapping each `<rect>`; SVG anchors work without any JavaScript, so the map still functions if scripts are blocked. Colour tokens: cream `#FBF3E7`, terracotta `#C0824F`, ink `#2E2B28`, slate `#6F7275`; define them on `:root`, redefine under `@media (prefers-color-scheme: dark)`, and give `body` an explicit background.
+Design notes for the implementer: one `<style>` block, no scripts beyond a single inline `<script>` using only `document.querySelector` and `classList` — no `fetch`, no modules, no service worker, because the file is opened from `file://` on phones. The plot map is an `<svg viewBox="0 0 1000 1416">` layered over the layout image with `<a href>` wrapping each `<rect>`; SVG anchors work without any JavaScript, so the map still functions if scripts are blocked. Colour tokens: cream `#FBF3E7`, terracotta `#C0824F`, ink `#2E2B28`, slate `#6F7275`; define them on `:root`, declare `color-scheme: light`, and give `body` an explicit light background. No dark mode and no dark-ground sections anywhere — the owner asked for white or light throughout. Accent blocks use terracotta on cream, never ink on a dark fill.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -881,9 +882,19 @@ class TestHtml(unittest.TestCase):
         self.assertIsNone(re.search(r"(₹|Rs\.?\s*\d)", self.html))
         self.assertIn("Price on call", self.html)
 
-    def test_dark_mode_and_explicit_body_background(self):
-        self.assertIn("prefers-color-scheme: dark", self.html)
+    def test_light_only_with_explicit_body_background(self):
+        self.assertIn("color-scheme: light", self.html)
+        self.assertNotIn("prefers-color-scheme: dark", self.html)
         self.assertRegex(self.html, r"body\s*\{[^}]*background")
+
+    def test_no_dark_page_ground(self):
+        # Every declared background must be light. Guards against a dark hero
+        # or footer slipping in.
+        import re as _re
+        for hexcode in _re.findall(r"background[^;:]*:\s*#([0-9a-fA-F]{6})", self.html):
+            r, g, b = (int(hexcode[i:i + 2], 16) for i in (0, 2, 4))
+            luma = 0.2126 * r + 0.7152 * g + 0.0722 * b
+            self.assertGreater(luma, 120, f"dark background #{hexcode}")
 
     def test_under_size_budget(self):
         self.assertLess(len(self.html.encode("utf-8")), 6 * 1024 * 1024)
@@ -907,7 +918,7 @@ Build `render_html()` to emit, in order: the eight sections from `content.SECTIO
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `python3 -I -m unittest tests.test_html -v`
-Expected: PASS, 11 tests
+Expected: PASS, 12 tests
 
 - [ ] **Step 5: Commit**
 
