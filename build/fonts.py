@@ -74,21 +74,6 @@ def face_css(locale: str) -> str:
     )
 
 
-def stack(locale: str, role: str) -> str:
-    """The font-family list for one locale and role, Indic face first.
-
-    The vendored subsets carry no Latin, so a Latin run inside an Indic
-    line -- "sq ft", "48", the project's own name -- falls through to the
-    brochure's existing stack. That is wanted: the numerals and the brand
-    keep the brochure's serif.
-    """
-    base = "var(--serif)" if role == "serif" else "var(--sans)"
-    families = PDF_FAMILIES.get(locale)
-    if not families:
-        return base
-    return f"'{FACE_NAMES[families[role]]}', {base}"
-
-
 def ttf_archive_dir() -> str:
     """The directory MuPDF reads the TTFs out of."""
     return DIR
