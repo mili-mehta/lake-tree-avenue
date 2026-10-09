@@ -48,7 +48,7 @@ ROOM_LABELS = {
 
 ROOM_VALUE_WORDS = {
     "standing_balcony": "2'-0\" પહોળી, બે",
-    "also": "સ્ટોર, વોશ એરિયા, ઓટો, ખાનગી ટેરેસ",
+    "also": "સ્ટોર, વોશ એરિયા, ઓટલો, ખાનગી ટેરેસ",
 }
 
 PROJECT_SCHEDULE = (
