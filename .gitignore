@@ -4,3 +4,12 @@ node_modules/
 .superpowers/
 __pycache__/
 *.pyc
+
+# Private working material - never publish (repo feeds GitHub Pages)
+Lake Tree Avenue Marketing Strategy.md
+compass_artifact_*.md
+REV.LAYOUT*.pdf
+lake tree brocure.pdf
+resp.json
+rk.html
+docs/superpowers/
