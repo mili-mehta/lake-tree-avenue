@@ -4,7 +4,21 @@ import tempfile
 import unittest
 
 import fitz
-from build import build_pdf, content
+from build import build_pdf, content, copy, fonts
+
+EN = copy.for_locale("en")
+
+# MuPDF's shaper substitutes the standard fi/fl ligatures, so extracted
+# text reads "Ground ﬂoor". That is one character, not two, and every
+# assertion below is about the words rather than the glyphs.
+LIGATURES = {"\ufb00": "ff", "\ufb01": "fi", "\ufb02": "fl",
+             "\ufb03": "ffi", "\ufb04": "ffl"}
+
+
+def _unligate(text: str) -> str:
+    for glyph, letters in LIGATURES.items():
+        text = text.replace(glyph, letters)
+    return text
 
 # cover, project, then a page per floor per type, then
 # layout, specs, location, contact
@@ -95,8 +109,8 @@ class TestPdf(unittest.TestCase):
                      "to IS 1786 for all reinforcement in columns, beams and "
                      "slabs, and an independent third party structural audit "
                      "before handover of each home. " * 6)
-        groups = (("Structure", long_copy),) + content.SPEC_GROUPS[1:]
-        with unittest.mock.patch.object(content, "SPEC_GROUPS", groups):
+        groups = (("Structure", long_copy),) + EN.SPEC_GROUPS[1:]
+        with unittest.mock.patch.object(EN, "SPEC_GROUPS", groups):
             with self.assertRaises(build_pdf.LayoutOverflow):
                 build_pdf.build_doc()
 
@@ -113,12 +127,13 @@ class TestPdf(unittest.TestCase):
                     f"page {i+1} text runs into the footer: {block[4][:40]!r}")
 
     def _flat(self, *pages):
-        return " ".join(" ".join(self.doc[i].get_text().split()) for i in pages)
+        return _unligate(
+            " ".join(" ".join(self.doc[i].get_text().split()) for i in pages))
 
     def test_every_unit_room_appears_across_its_own_plans_pages(self):
         for key, pages in PLAN_PAGES.items():
             text = self._flat(*pages)
-            for room, dim in content.UNIT_TYPES[key]["rooms"]:
+            for room, dim in content.unit_rooms(content.UNIT_TYPES[key], EN):
                 self.assertIn(room, text, f"Type {key} missing row {room!r}")
                 self.assertIn(" ".join(dim.split()), text,
                               f"Type {key} missing dimension for {room!r}")
@@ -173,13 +188,14 @@ class TestPdf(unittest.TestCase):
 
     def test_each_plan_page_says_it_draws_two_adjacent_homes(self):
         for i in ALL_PLAN_PAGES:
-            self.assertIn(" ".join(content.PLAN_PAIR_NOTE.split()),
+            self.assertIn(" ".join(EN.PLAN_PAIR_NOTE.split()),
                           self._flat(i),
                           f"page {i+1} does not say the sheet shows a pair")
 
     def test_each_plan_page_names_the_plots_it_is_drawing(self):
         for key, pages in PLAN_PAGES.items():
-            plots = content.UNIT_TYPES[key]["plots"].replace("\u2013", "-")
+            plots = content.plots_label(
+                content.UNIT_TYPES[key], EN).replace("\u2013", "-")
             for i in pages:
                 self.assertIn(plots.lower(), self._flat(i).lower(),
                               f"page {i+1} does not say which plots it shows")
@@ -194,8 +210,8 @@ class TestPdf(unittest.TestCase):
 
     def test_every_specification_group_appears_in_full(self):
         text = " ".join(p.get_text() for p in self.doc)
-        flat = " ".join(text.split())
-        for label, body in content.SPEC_GROUPS:
+        flat = _unligate(" ".join(text.split()))
+        for label, body in EN.SPEC_GROUPS:
             self.assertIn(" ".join(body.split()), flat,
                           f"{label} copy is cut short")
 
@@ -286,6 +302,146 @@ class TestSchedule(unittest.TestCase):
         rows = tuple((f"Row {i}", "39'-1\"") for i in range(40))
         with self.assertRaises(build_pdf.LayoutOverflow):
             self._rows(rows, 260.0, 138.0)
+
+
+class TestEveryLanguage(unittest.TestCase):
+    """The Hindi and Gujarati documents, which no reviewer here proofreads."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.docs = {}
+        cls.paths = {}
+        for locale in copy.LOCALES:
+            fd, path = tempfile.mkstemp(suffix=f"-{locale}.pdf")
+            os.close(fd)
+            build_pdf.write(path, locale)
+            cls.paths[locale] = path
+            cls.docs[locale] = fitz.open(path)
+
+    @classmethod
+    def tearDownClass(cls):
+        for locale, doc in cls.docs.items():
+            doc.close()
+            os.unlink(cls.paths[locale])
+
+    def test_every_language_builds_the_same_ten_pages(self):
+        # A LayoutOverflow during the build is the real assertion here:
+        # Devanagari runs longer than English, and a box tuned for the
+        # English would drop the tail of a sentence.
+        for locale, doc in self.docs.items():
+            self.assertEqual(doc.page_count, 10, locale)
+
+    def test_every_indic_character_has_a_glyph(self):
+        # A font missing one conjunct still renders the line, with a hole
+        # in it. Checked at the source rather than in the pixels: the
+        # pixels cannot tell an empty box from a space.
+        for locale in ("hi", "gu"):
+            words = copy.for_locale(locale)
+            faces = [fitz.Font(fontfile=os.path.join(
+                fonts.DIR, fonts.PDF_FAMILIES[locale][role] + ".ttf"))
+                for role in ("serif", "sans")]
+            used = set()
+            for _, text in copy.strings(words):
+                used |= {c for c in text if build_pdf._INDIC.match(c)}
+            for key in content.UNIT_TYPES:
+                for _, value in content.unit_rooms(
+                        content.UNIT_TYPES[key], words):
+                    used |= {c for c in value if build_pdf._INDIC.match(c)}
+            for face in faces:
+                missing = sorted(c for c in used if not face.has_glyph(ord(c)))
+                self.assertEqual(missing, [], f"{locale} {face.name}")
+
+    def test_the_latin_serif_carries_the_characters_the_indic_faces_lack(self):
+        # None of the four Noto Indic faces has U+00BD. The half sign
+        # appears in half the dimensions in this brochure, so the Latin
+        # run it sits in has to be set in a face that does have it.
+        for locale in ("hi", "gu"):
+            for role in ("serif", "sans"):
+                face = fitz.Font(fontfile=os.path.join(
+                    fonts.DIR, fonts.PDF_FAMILIES[locale][role] + ".ttf"))
+                self.assertFalse(face.has_glyph(0x00BD),
+                                 f"{locale}/{role} gained a half sign; the "
+                                 "run marking may no longer be needed")
+        # So every half sign that reaches the page must have been set in
+        # the Latin face instead. Checked on the built document, because
+        # that is where the tofu box appeared.
+        for locale in ("hi", "gu"):
+            seen = 0
+            for page in self.docs[locale]:
+                for block in page.get_text("dict")["blocks"]:
+                    for line in block.get("lines", ()):
+                        for span in line["spans"]:
+                            if "\u00bd" not in span["text"]:
+                                continue
+                            seen += 1
+                            self.assertNotIn(
+                                "Devanagari", span["font"],
+                                f"{locale}: a half sign in the Indic face")
+                            self.assertNotIn(
+                                "Gujarati", span["font"],
+                                f"{locale}: a half sign in the Indic face")
+            self.assertGreater(seen, 0, f"{locale} draws no half sign at all")
+
+    def test_measurements_are_marked_as_latin_runs(self):
+        with build_pdf._using("gu"):
+            body = build_pdf._body("\u0aaa\u0ab9\u0acb\u0ab3\u0abe\u0a88 "
+                                   "24'-7\u00bd\"")
+        self.assertIn('<span class="lat">', body)
+        self.assertIn("\u00bd", body.split('<span class="lat">')[1])
+
+    def test_english_is_left_exactly_as_it_was(self):
+        # The English document needs no run marking, and adding it would
+        # churn a file that is already published and being forwarded.
+        with build_pdf._using("en"):
+            self.assertNotIn("<span", build_pdf._body("17'-5\" to 24'-7\u00bd\""))
+
+    def test_each_language_embeds_only_the_faces_it_draws_with(self):
+        expected = {
+            "en": set(),
+            "hi": {"Noto Serif Devanagari", "Noto Sans Devanagari"},
+            "gu": {"Noto Serif Gujarati", "Noto Sans Gujarati"},
+        }
+        for locale, doc in self.docs.items():
+            names = {f[3] for page in doc for f in page.get_fonts()}
+            for want in expected[locale]:
+                self.assertTrue(any(want.replace(" ", "") in n.replace(" ", "")
+                                    for n in names),
+                                f"{locale} does not embed {want}: {names}")
+            if locale == "en":
+                self.assertFalse([n for n in names if "Noto Sans Dev" in n
+                                  or "Gujarati" in n], names)
+
+    def test_no_text_runs_into_the_footer_in_any_language(self):
+        for locale, doc in self.docs.items():
+            for i, page in enumerate(doc):
+                for block in page.get_text("blocks"):
+                    if not block[4].strip():
+                        continue
+                    self.assertLessEqual(
+                        block[3], build_pdf.FOOTER_TOP + 32,
+                        f"{locale} page {i+1}: {block[4][:40]!r}")
+
+    def test_every_page_carries_the_footer_links_in_every_language(self):
+        for locale, doc in self.docs.items():
+            for i, page in enumerate(doc):
+                uris = {link["uri"] for link in page.get_links()
+                        if link.get("uri")}
+                self.assertIn(content.tel_link(), uris, f"{locale} page {i+1}")
+                self.assertIn(content.PROJECT["maps_url"], uris,
+                              f"{locale} page {i+1}")
+
+    def test_no_forbidden_term_reaches_any_language(self):
+        # Extraction from the Indic documents is unreliable -- shaped
+        # glyph runs have no clean reverse mapping -- so the guard runs
+        # against the copy, which is where it can actually see.
+        for locale in copy.LOCALES:
+            blob = "\n".join(t for _, t in
+                              copy.strings(copy.for_locale(locale)))
+            self.assertEqual(content.forbidden_hits(blob), [], locale)
+
+    def test_each_language_stays_under_the_size_budget(self):
+        for locale, path in self.paths.items():
+            self.assertLess(os.path.getsize(path), 4 * 1024 * 1024, locale)
 
 
 if __name__ == "__main__":
