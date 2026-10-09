@@ -1,0 +1,12 @@
+{
+  // Static-asset-only Worker: Cloudflare serves docs/ directly, no Worker script.
+  // Pinned here so deploys do not depend on Wrangler's interactive auto-detection.
+  "name": "lake-tree-avenue",
+  "compatibility_date": "2026-10-09",
+  "assets": {
+    "directory": "./docs",
+    "not_found_handling": "404-page"
+  },
+  "workers_dev": true,
+  "preview_urls": false
+}
