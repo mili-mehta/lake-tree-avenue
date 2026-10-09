@@ -13,7 +13,7 @@ LATIN_OK = (
     "Google", "BHK", "sq ft", "Spunpipe & Construction Co.", "Spunpipe",
     "Construction", "LAYOUT PLAN", "Waghodia", "Vadodara", "Kamlapura",
     "Alkapuri", "Halol", "Ramkrishna Chambers", "BPC Road", "Regd",
-    "Office", "laketreeavenue@gmail.com", "@laketreeavenue",
+    "Office", "info@laketreeavenue.com", "@laketreeavenue",
     "laketreeavenue.com",
     "AC", "PDF", "Tremix",
 )

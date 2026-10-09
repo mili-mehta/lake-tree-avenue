@@ -22,7 +22,7 @@ PROJECT = {
     "developer": "TAM Developers",
     "phone_e164": "+918758756666",
     "phone_display": "+91 87587 56666",
-    "email": "laketreeavenue@gmail.com",
+    "email": "info@laketreeavenue.com",
     # The project's own domain. Printed bare, because that is what a
     # buyer types and what fits a footer cell; the link beside it
     # carries the scheme a browser and a PDF viewer both need.

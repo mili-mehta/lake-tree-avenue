@@ -28,7 +28,7 @@ class TestFacts(unittest.TestCase):
         self.assertTrue(content.wa_link("hi").startswith("https://wa.me/918758756666?text="))
 
     def test_mail_link(self):
-        self.assertEqual(content.mail_link(), "mailto:laketreeavenue@gmail.com")
+        self.assertEqual(content.mail_link(), "mailto:info@laketreeavenue.com")
 
     def test_website_is_printed_bare_and_linked_with_a_scheme(self):
         self.assertEqual(content.PROJECT["website_display"],
