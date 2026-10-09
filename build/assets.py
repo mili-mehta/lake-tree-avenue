@@ -11,9 +11,10 @@ import fitz
 from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LOGO_SRC = os.path.join(ROOT, "images", "174E3041-9C9A-4984-BD36-BA254A0E98E2.PNG")
-RENDER_SRC = os.path.join(ROOT, "images", "LAKE TREE.PNG")
+LOGO_SRC = os.path.join(ROOT, "images", "lake-tree-avenue-logo.PNG")
+RENDER_SRC = os.path.join(ROOT, "images", "lake-tree-avenue.jpg")
 LAYOUT_SRC = os.path.join(ROOT, "REV.LAYOUT - 07-10-2026.pdf")
+SITE_PLAN_SRC = os.path.join(ROOT, "images", "site-plan.png")
 
 _WHITE = 247  # a channel value above this counts as blank paper
 
@@ -117,6 +118,19 @@ def layout_png(width: int = 1600, box=None) -> bytes:
         img = img.crop((round(box[0] * w), round(box[1] * h),
                         round(box[2] * w), round(box[3] * h)))
     return _encode(img, "PNG", optimize=True)
+
+
+def site_plan_jpeg(width: int = 1500, quality: int = 82) -> bytes:
+    """The coloured layout plan, as drawn by the architect.
+
+    This is its own rendering rather than a crop of the drawing sheet, so it
+    arrives already framed and needs no trimming — only a downscale to the
+    width the page shows it at.
+    """
+    img = Image.open(SITE_PLAN_SRC).convert("RGB")
+    ratio = width / img.width
+    img = img.resize((width, max(1, round(img.height * ratio))), Image.LANCZOS)
+    return _encode(img, "JPEG", quality=quality, optimize=True, progressive=True)
 
 
 def plan_crops(width: int = 2400, quality: int = 82) -> dict[str, bytes]:

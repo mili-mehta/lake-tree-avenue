@@ -174,22 +174,35 @@ def _page(doc):
 # --------------------------------------------------------------------------
 
 def _cover(doc, art):
+    """The render across the full page width, titling on the sand below.
+
+    The render is shown whole rather than cropped to a fixed band: it carries
+    the logo in its own top corner, and a crop deep enough to fill a taller
+    band would cut the mark off. Its height therefore sets where the sand
+    starts, and the band is sized to whatever is left above the footer.
+    """
     page = _page(doc)
-    band_top = 372.0
-    img_rect = fitz.Rect(0, 0, PAGE_SIZE[0], band_top)
-    page.insert_image(img_rect, stream=_crop_to_aspect(
-        art["render"], PAGE_SIZE[0] / band_top))
+    render = Image.open(io.BytesIO(art["render"]))
+    band_top = round(PAGE_SIZE[0] * render.height / render.width, 2)
+    page.insert_image(fitz.Rect(0, 0, PAGE_SIZE[0], band_top),
+                      stream=art["render"])
     _fill(page, fitz.Rect(0, band_top, PAGE_SIZE[0], PAGE_SIZE[1]), SAND)
 
-    _place_image(page, art["logo"],
-                 fitz.Rect(MARGIN, band_top + 22, MARGIN + 150,
-                           band_top + 22 + 112))
-
-    _text(page, fitz.Rect(MARGIN + 182, band_top + 34, 700, band_top + 96),
-          content.PROJECT["name"], font=SERIF, size=34, color=INK)
-    _text(page, fitz.Rect(MARGIN + 184, band_top + 86, 700, band_top + 140),
-          f"{content.CREDIT}\nWaghodia Main Road, Vadodara",
-          font=SANS, size=10.5, color=INK_SOFT)
+    # The band is only as deep as the render leaves it, so both lines are
+    # checked: insert_textbox drops what does not fit and says so only in
+    # its return value.
+    lines = (
+        (fitz.Rect(MARGIN, band_top + 8, 700, band_top + 42),
+         content.PROJECT["name"], SERIF, 20, INK),
+        (fitz.Rect(MARGIN + 1, band_top + 44, 700, band_top + 70),
+         f"{content.CREDIT}   /   Waghodia Main Road, Vadodara",
+         SANS, 10, INK_SOFT),
+    )
+    for rect, text, font, size, color in lines:
+        if _text(page, rect, text, font=font, size=size, color=color) < 0:
+            raise LayoutOverflow(
+                f"cover line {text!r} does not fit the {rect.height:.0f} pt "
+                f"band under a render {band_top:.0f} pt deep")
     _footer(page)
     return page
 
@@ -371,7 +384,7 @@ def build_doc() -> fitz.Document:
     art = {
         "logo": assets.logo_png(420),
         "render": assets.render_jpeg(1800),
-        "site": assets.layout_png(1500, assets.SITE_BOX),
+        "site": assets.site_plan_jpeg(1500),
         "crop_A": crops["A"],
         "crop_B": crops["B"],
         "elevation": crops["elevation"],

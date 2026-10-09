@@ -57,23 +57,20 @@ p:last-child { margin-bottom: 0; }
 
 .lead { font-size: 1.22rem; color: var(--ink-soft); line-height: 1.5; }
 
-/* ---------- hero: a spread, not a banner ---------- */
-.hero { display: grid; grid-template-columns: 1fr; }
-.hero-panel {
-  background: #f3eadb;
-  padding: 56px 28px 48px;
-  display: flex; flex-direction: column; justify-content: center;
-}
-.hero-logo { width: 196px; margin-bottom: 36px; }
+/* ---------- hero: the render edge to edge, titling beneath ---------- */
+/* The render carries the logo and the name in its own top corner, so the
+   page does not repeat the mark here; the band below it only names the
+   address and offers the two ways in. */
+.hero-figure { overflow: hidden; }
+.hero-figure img { width: 100%; height: auto;
+  animation: settle 7s cubic-bezier(.2,.6,.2,1) both; }
+@keyframes settle { from { transform: scale(1.06); } to { transform: scale(1); } }
+.hero-panel { background: #f3eadb; padding: 40px 0 44px; }
 .hero h1 { margin-bottom: 18px; }
 .hero-sub {
   font-family: var(--sans); font-size: 0.95rem; letter-spacing: 0.04em;
   color: var(--ink-soft); margin-bottom: 30px;
 }
-.hero-figure { overflow: hidden; }
-.hero-figure img { width: 100%; height: 100%; object-fit: cover;
-  animation: settle 7s cubic-bezier(.2,.6,.2,1) both; }
-@keyframes settle { from { transform: scale(1.06); } to { transform: scale(1); } }
 
 /* ---------- actions ---------- */
 .actions { display: flex; flex-wrap: wrap; gap: 12px; }
@@ -213,8 +210,7 @@ footer img { width: 128px; margin-bottom: 18px; }
 @media (min-width: 820px) {
   body { font-size: 19px; }
   section { padding: 110px 0; }
-  .hero { grid-template-columns: 0.92fr 1.08fr; min-height: 86vh; }
-  .hero-panel { padding: 64px 56px; }
+  .hero-panel { padding: 54px 0 58px; }
   .plan-grid { grid-template-columns: 1.55fr 1fr; gap: 46px; }
   .spec-list div { grid-template-columns: 210px 1fr; gap: 26px; }
   .amenities { columns: 2; }
@@ -266,10 +262,9 @@ def _plan_pane(key: str, crop_uri: str) -> str:
 
 def render_html() -> str:
     p = content.PROJECT
-    logo = assets.data_uri(assets.logo_png(420), "image/png")
     logo_small = assets.data_uri(assets.logo_png(260), "image/png")
     render = assets.data_uri(assets.render_jpeg(1600), "image/jpeg")
-    layout = assets.data_uri(assets.layout_png(1500, assets.SITE_BOX), "image/png")
+    layout = assets.data_uri(assets.site_plan_jpeg(1500), "image/jpeg")
     crops = assets.plan_crops()
     crop_a = assets.data_uri(crops["A"], "image/jpeg")
     crop_b = assets.data_uri(crops["B"], "image/jpeg")
@@ -292,8 +287,10 @@ def render_html() -> str:
 
     # hero
     out.append('<header class="hero">')
-    out.append('<div class="hero-panel">')
-    out.append(f'<img class="hero-logo" src="{logo}" alt="Lake Tree Avenue">')
+    out.append(f'<div class="hero-figure"><img src="{render}" '
+               'alt="Lake Tree Avenue townhouses along the avenue">'
+               "</div>")
+    out.append('<div class="hero-panel"><div class="wrap">')
     out.append(f"<h1>{_esc(s['cover']['title'])}</h1>")
     out.append(
         f'<p class="hero-sub">{_esc(s["cover"]["body"][0])}<br>'
@@ -302,10 +299,7 @@ def render_html() -> str:
     out.append(f'<a class="btn" href="{wa}" target="_blank" rel="noopener">'
                "Enquire on WhatsApp</a>")
     out.append(f'<a class="btn btn-quiet" href="#plots">See the plot map</a>')
-    out.append("</div></div>")
-    out.append(f'<div class="hero-figure"><img src="{render}" '
-               'alt="Lake Tree Avenue townhouses at dusk, seen along the avenue">'
-               "</div>")
+    out.append("</div></div></div>")
     out.append("</header>")
 
     # the project
