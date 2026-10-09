@@ -1,6 +1,17 @@
 import re, unittest
 from urllib.parse import unquote
-from build import content
+from build import content, copy
+
+# The schedule is keyed, not labelled, so that a sheet can find its rows
+# in any language. These tests still read in English, so they resolve the
+# labels through the English module -- which also proves the resolver
+# reproduces exactly what the brochure said before it learned Hindi.
+EN = copy.for_locale("en")
+
+
+def _rooms(key):
+    """One unit's schedule as an English reader sees it."""
+    return dict(content.unit_rooms(content.UNIT_TYPES[key], EN))
 
 
 class TestFacts(unittest.TestCase):
@@ -52,7 +63,7 @@ class TestFacts(unittest.TestCase):
         self.assertIn("Talati", content.forbidden_hits("a Talati family project"))
 
     def test_credit_line_names_the_firm_only(self):
-        self.assertEqual(content.CREDIT, "A project by TAM Developers")
+        self.assertEqual(EN.CREDIT, "A project by TAM Developers")
 
 
 class TestWhatsAppEncoding(unittest.TestCase):
@@ -84,15 +95,15 @@ class TestSupersededFacts(unittest.TestCase):
         out = []
         for v in content.PROJECT.values():
             out.append(str(v))
-        for s in content.SECTIONS:
-            out.append(s["title"]); out.append(s["lead"]); out.extend(s["body"])
-        for label, text in content.SPEC_GROUPS:
-            out.append(label); out.append(text)
-        out.extend(content.AMENITIES)
-        for t in content.UNIT_TYPES.values():
-            out.append(t["label"]); out.append(t["plots"])
-            out.extend(r for pair in t["rooms"] for r in pair)
-            out.extend(s["caption"] for s in t.get("sheets", ()))
+        # Every language, not just English: a superseded term is just as
+        # damaging in Gujarati, and the guard only earns its keep if it
+        # sees the copy a buyer actually reads.
+        for code in copy.LOCALES:
+            words = copy.for_locale(code)
+            out += [text for _, text in copy.strings(words)]
+            for key in content.UNIT_TYPES:
+                out += [v for pair in content.unit_rooms(
+                    content.UNIT_TYPES[key], words) for v in pair]
         return out
 
     def test_no_forbidden_term_in_any_copy(self):
@@ -107,16 +118,26 @@ class TestSupersededFacts(unittest.TestCase):
 
 class TestStructure(unittest.TestCase):
     def test_seven_sections_in_spec_order(self):
-        ids = [s["id"] for s in content.SECTIONS]
-        self.assertEqual(ids, ["cover", "project", "plans",
-                               "layout", "specs", "location", "contact"])
+        self.assertEqual(list(content.SECTION_IDS),
+                         ["cover", "project", "plans",
+                          "layout", "specs", "location", "contact"])
+        for code in copy.LOCALES:
+            ids = [s["id"] for s in copy.for_locale(code).SECTIONS]
+            self.assertEqual(ids, list(content.SECTION_IDS), code)
 
     def test_unit_types_cover_all_48_plots(self):
-        self.assertEqual(content.UNIT_TYPES["A"]["plots"], "Plots 01–06")
-        self.assertEqual(content.UNIT_TYPES["B"]["plots"], "Plots 07–48")
+        self.assertEqual(content.plots_label(content.UNIT_TYPES["A"], EN),
+                         "Plots 01–06")
+        self.assertEqual(content.plots_label(content.UNIT_TYPES["B"], EN),
+                         "Plots 07–48")
+        # The numbers are the same in every language; only the word moves.
+        for code in copy.LOCALES:
+            words = copy.for_locale(code)
+            self.assertIn("07–48",
+                          content.plots_label(content.UNIT_TYPES["B"], words))
 
     def test_type_b_dimensions_match_the_layout_drawing(self):
-        rooms = dict(content.UNIT_TYPES["B"]["rooms"])
+        rooms = _rooms("B")
         self.assertEqual(rooms["Kitchen"], "10'-6\" × 8'-1½\"")
         self.assertEqual(rooms["Master bedroom"], "11'-0\" × 12'-6\"")
         self.assertEqual(rooms["Second bedroom"], "10'-1½\" × 10'-7½\"")
@@ -126,7 +147,7 @@ class TestStructure(unittest.TestCase):
         # Both plots 07-48 sheets dimension the same adjacent pair, 24'-8"
         # beside 18'-1½", so the row widths genuinely differ along the
         # avenue and a single figure would be wrong for half of them.
-        rooms = dict(content.UNIT_TYPES["B"]["rooms"])
+        rooms = _rooms("B")
         self.assertEqual(rooms["Plot width"],
                          "18'-1½\" to 24'-8\"  [5.52 m to 7.52 m]")
 
@@ -134,7 +155,7 @@ class TestStructure(unittest.TestCase):
         # 24'-3" [7.39] is a segment of the depth chain
         # (1.52 + 7.39 + 3.00 = 11.91). Advertising it as the plot depth
         # sells 65.7 m2 of land as 40.8 m2.
-        rooms = dict(content.UNIT_TYPES["B"]["rooms"])
+        rooms = _rooms("B")
         self.assertEqual(rooms["Plot depth"], "39'-1\"  [11.91 m]")
 
     def test_type_a_plot_width_is_a_range_across_the_six_plots(self):
@@ -142,25 +163,25 @@ class TestStructure(unittest.TestCase):
         # ground floor sheet carries 20'-5" and 17'-5", the first floor
         # sheet 24'-7½" and 18'-1½". A single width would be wrong for
         # four of the six plots, so the schedule gives the range.
-        rooms = dict(content.UNIT_TYPES["A"]["rooms"])
+        rooms = _rooms("A")
         self.assertEqual(rooms["Plot width"],
                          "17'-5\" to 24'-7½\"  [5.31 m to 7.51 m]")
 
     def test_type_a_plot_depth_is_the_drawn_depth(self):
-        rooms = dict(content.UNIT_TYPES["A"]["rooms"])
+        rooms = _rooms("A")
         self.assertEqual(rooms["Plot depth"], "40'-4½\"  [12.30 m]")
 
     def test_type_a_first_floor_dimensions_match_the_drawing(self):
         # Read off the plots 01-06 first floor sheet. These three rows used
         # to disagree with the drawing printed beside them.
-        rooms = dict(content.UNIT_TYPES["A"]["rooms"])
+        rooms = _rooms("A")
         self.assertEqual(rooms["Master bedroom"], "11'-0\" × 12'-6\"")
         self.assertEqual(rooms["Second bedroom"], "10'-1½\" × 11'-7½\"")
         self.assertEqual(rooms["Attached toilet"], "6'-0\" × 5'-0\"")
         self.assertEqual(rooms["Second attached toilet"], "4'-0\" × 7'-0\"")
 
     def test_type_a_ground_floor_dimensions_match_the_drawing(self):
-        rooms = dict(content.UNIT_TYPES["A"]["rooms"])
+        rooms = _rooms("A")
         self.assertEqual(rooms["Living room / dining"], "16'-8\" × 15'-0\"")
         self.assertEqual(rooms["Kitchen"], "9'-9½\" × 9'-1½\"")
         self.assertEqual(rooms["Ground floor toilet"], "4'-6\" × 5'-0\"")
@@ -170,7 +191,7 @@ class TestStructure(unittest.TestCase):
             sheets = unit["sheets"]
             self.assertEqual([s["key"] for s in sheets], ["ground", "first"],
                              f"Type {key} sheet order")
-            self.assertEqual([s["caption"] for s in sheets],
+            self.assertEqual([EN.SHEET_CAPTIONS[s["key"]] for s in sheets],
                              ["Ground floor", "First floor"], f"Type {key}")
 
     def test_every_row_sits_on_exactly_one_sheet(self):
@@ -186,21 +207,22 @@ class TestStructure(unittest.TestCase):
 
     def test_sheet_rows_resolves_in_sheet_order(self):
         unit = content.UNIT_TYPES["A"]
-        rows = content.sheet_rows(unit, unit["sheets"][1])
+        rows = content.sheet_rows(unit, unit["sheets"][1], EN)
         self.assertEqual(rows[0], ("Master bedroom", "11'-0\" × 12'-6\""))
         self.assertEqual([name for name, _ in rows],
-                         list(unit["sheets"][1]["rows"]))
+                         [EN.ROOM_LABELS[k] for k in unit["sheets"][1]["rows"]])
 
     def test_sheet_rows_rejects_a_row_the_unit_does_not_have(self):
         unit = content.UNIT_TYPES["A"]
         with self.assertRaises(KeyError):
-            content.sheet_rows(unit, {"key": "x", "rows": ("Wine cellar",)})
+            content.sheet_rows(unit, {"key": "x", "rows": ("wine_cellar",)},
+                               EN)
 
     def test_bedrooms_are_scheduled_on_the_upper_floor(self):
         # Both bedrooms are drawn upstairs in both types. Listing one
         # beside the ground floor plan contradicts the drawing next to it.
         for key, unit in content.UNIT_TYPES.items():
-            ground = unit["sheets"][0]["rows"]
+            ground = [EN.ROOM_LABELS[r] for r in unit["sheets"][0]["rows"]]
             self.assertFalse([r for r in ground if "bedroom" in r.lower()],
                              f"Type {key} schedules a bedroom on the ground floor")
 
@@ -208,13 +230,13 @@ class TestStructure(unittest.TestCase):
         # Every sheet draws an adjacent pair, so a reader sees two kitchens
         # and two staircases. Without a note the schedule beside it reads
         # as covering both, and the plot area is the figure that misleads.
-        note = content.PLAN_PAIR_NOTE
+        note = EN.PLAN_PAIR_NOTE
         self.assertIn("two", note.lower())
         self.assertIn("one home", note.lower())
 
     def test_both_types_state_a_plot_area_in_square_feet(self):
         for key, unit in content.UNIT_TYPES.items():
-            area = dict(unit["rooms"]).get("Plot area")
+            area = _rooms(key).get("Plot area")
             self.assertIsNotNone(area, f"Type {key} states no plot area")
             self.assertIn("sq ft", area, f"Type {key} area is not in square feet")
 
@@ -223,7 +245,7 @@ class TestStructure(unittest.TestCase):
         # it is the one nobody can check by eye. Derive it from the two
         # dimensions printed beside it rather than trusting the literal.
         for key, unit in content.UNIT_TYPES.items():
-            rooms = dict(unit["rooms"])
+            rooms = _rooms(key)
             lo_w, hi_w = (_feet(t) for t in _imperial(rooms["Plot width"]))
             depth = _feet(_imperial(rooms["Plot depth"])[0])
             got_lo, got_hi = (int(n) for n in
@@ -238,11 +260,11 @@ class TestStructure(unittest.TestCase):
 
     def test_plot_area_is_scheduled_with_the_ground_floor(self):
         for key, unit in content.UNIT_TYPES.items():
-            self.assertIn("Plot area", unit["sheets"][0]["rows"], f"Type {key}")
+            self.assertIn("plot_area", unit["sheets"][0]["rows"], f"Type {key}")
 
     def test_both_types_state_a_plot_width_and_a_plot_depth(self):
         for key, unit in content.UNIT_TYPES.items():
-            rooms = dict(unit["rooms"])
+            rooms = _rooms(key)
             self.assertIn("Plot width", rooms, f"Type {key}")
             self.assertIn("Plot depth", rooms, f"Type {key}")
             self.assertNotIn("Plot size", rooms,
@@ -250,7 +272,7 @@ class TestStructure(unittest.TestCase):
 
     def test_no_type_advertises_a_dimension_chain_segment_as_a_plot_size(self):
         for key, unit in content.UNIT_TYPES.items():
-            plot = " ".join(value for label, value in unit["rooms"]
+            plot = " ".join(value for label, value in _rooms(key).items()
                             if label.startswith("Plot"))
             self.assertTrue(plot, f"Type {key} states no plot dimension")
             self.assertNotIn("7.70", plot, f"Type {key} reuses a depth segment")
@@ -260,7 +282,7 @@ class TestStructure(unittest.TestCase):
         # The cover sells "48 two-bedroom townhouses". A schedule that lists
         # one bedroom makes six of the plots look like a lesser product.
         for key, unit in content.UNIT_TYPES.items():
-            labels = [room for room, _ in unit["rooms"]]
+            labels = list(_rooms(key))
             beds = [l for l in labels if "bedroom" in l.lower()]
             toilets = [l for l in labels if "toilet" in l.lower()]
             self.assertGreaterEqual(len(beds), 2, f"Type {key} bedrooms")
@@ -273,12 +295,12 @@ class TestLocation(unittest.TestCase):
     def test_corridor_landmarks_are_named(self):
         blob = " ".join(
             s["lead"] + " " + " ".join(s["body"])
-            for s in content.SECTIONS if s["id"] == "location")
+            for s in EN.SECTIONS if s["id"] == "location")
         self.assertIn("Parul University", blob)
         self.assertIn("Sumandeep", blob)
 
     def test_landmarks_appear_in_the_location_schedule(self):
-        rows = dict(content.LOCATION_ROWS)
+        rows = dict(EN.LOCATION_ROWS)
         self.assertIn("Between", rows)
         self.assertIn("Parul University", rows["Between"])
         self.assertIn("Sumandeep", rows["Between"])

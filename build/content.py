@@ -1,4 +1,8 @@
-"""Single source of truth for all Lake Tree Avenue brochure copy.
+"""Everything about Lake Tree Avenue that is true in every language.
+
+A phone number, a plot depth of 39'-1", a Google Maps URL and the list of
+terms that must never reach a buyer do not change when the reader switches
+to Gujarati. The words around them do, and those live in build/copy/.
 
 No I/O, no formatting decisions — renderers consume these values.
 """
@@ -15,7 +19,6 @@ SITE_LATLNG = "22.2918248,73.3433214"
 
 PROJECT = {
     "name": "Lake Tree Avenue",
-    "tagline": "New Age Townhouses",
     "developer": "TAM Developers",
     "phone_e164": "+918758756666",
     "phone_display": "+91 87587 56666",
@@ -25,11 +28,6 @@ PROJECT = {
     "social_handle": "@laketreeavenue",
     "instagram_url": "https://www.instagram.com/laketreeavenue",
     "facebook_url": "https://www.facebook.com/laketreeavenue",
-    "site_address": ("Lake Tree Avenue, Waghodia Main Road, "
-                     "next to Spunpipe & Construction Co., Kamlapura, "
-                     "Vadodara 391760"),
-    "regd_office": ("Regd. Office: 1-B Ramkrishna Chambers, BPC Road, "
-                    "Alkapuri, Vadodara 390007"),
     "site_latlng": SITE_LATLNG,
     # Google's documented universal maps URL (api=1). A "dir" link, not a
     # "search" one, so a tap on a phone hands off to the Maps app and comes
@@ -38,30 +36,44 @@ PROJECT = {
     "maps_url": "https://www.google.com/maps/dir/?api=1&destination="
                 + quote(SITE_LATLNG) + "&travelmode=driving",
     "unit_count": "48",
-    "unit_type": "2 BHK townhouses",
 }
 
-CREDIT = "A project by TAM Developers"
-
-# Every floor plan sheet draws an adjacent pair of townhouses, because that
-# is how they are built. A reader therefore sees two kitchens and two
-# staircases, and without saying so the schedule beside the drawing reads
-# as covering both homes -- the plot area most of all.
-PLAN_PAIR_NOTE = ("Each sheet draws two adjacent homes. "
-                  "Every dimension is for one home.")
+# The sections, in the order both renderers lay them out. The titles and
+# the prose are per language; only the running order is shared.
+SECTION_IDS = ("cover", "project", "plans", "layout", "specs", "location",
+               "contact")
 
 # Internal only. The owner credits the firm, never the individuals, so these
 # names must never reach a buyer-facing artefact. Bare surnames are listed too
 # because "a Talati family project" would carry the same information.
+#
+# Each entry is every spelling a reader could recognise it by. A guard that
+# only knows the Latin spelling goes blind the moment the copy is Hindi:
+# "अजवा" is the same claim to a buyer as "Ajwa".
 PRIVATE_NAMES = (
     "Dhruv Talati", "Shalin Talati", "Kinjal Mehta",
     "Talati", "Mehta",
+    "ध्रुव", "तलाटी",
+    "मेहता",
+    "ધ્રુવ", "તલાટી",
+    "મેહતા",
 )
 
 FORBIDDEN = (
     "Leo Enterprise", "RAA07983", "RERA", "Ajwa", "Sikandarpura",
     "The Palace", "F.P. No. 42", "3 BHK", "A-TYPE 3",
     "Pioneer Homoeopathic", "22.71",
+    # The same terms as a Hindi or Gujarati reader would meet them.
+    "लियो",            # Leo
+    "अजवा",            # Ajwa
+    "सिकंदरपुरा",
+    "रेरा",            # RERA
+    "3 बीएचके",
+    "લિયો",
+    "અજવા",
+    "સિકંદરપુરા",
+    "રેરા",
+    "3 બીએચકે",
 )
 
 
@@ -97,26 +109,34 @@ UNIT_TYPES = {
     # floor, which supersede the strip of small plans on the layout page.
     # The homes within a type are identical inside; only the land under
     # them varies, so plot width is a range and every room is one figure.
+    #
+    # Rows are keyed, not labelled. The label is the one part of a row that
+    # changes with the reader's language, and a sheet that referenced its
+    # rows by their English label would stop finding them in Hindi.
+    #
+    # A value of None means the row reads as prose rather than as a
+    # measurement, so it comes from the locale's ROOM_VALUE_WORDS. "{to}"
+    # is the range connector -- "to", "से", "થી".
     "A": {
-        "label": "Type A",
-        "plots": "Plots 01\u201306",
+        "plot_range": "01–06",
         "rooms": (
-            ("Plot width", "17'-5\" to 24'-7\u00bd\"  [5.31 m to 7.51 m]"),
-            ("Plot depth", "40'-4\u00bd\"  [12.30 m]"),
+            ("plot_width", "17'-5\" {to} 24'-7½\"  "
+                           "[5.31 m {to} 7.51 m]"),
+            ("plot_depth", "40'-4½\"  [12.30 m]"),
             # Width times depth at each end of the range, rounded down so
             # the brochure never claims land the plot does not have. No
             # metric twin: the two rows above carry it, and spelled out in
             # full this one wrapped to a second line on its own.
-            ("Plot area", "703 to 994 sq ft"),
-            ("Living room / dining", "16'-8\" \u00d7 15'-0\""),
-            ("Kitchen", "9'-9\u00bd\" \u00d7 9'-1\u00bd\""),
-            ("Master bedroom", "11'-0\" \u00d7 12'-6\""),
-            ("Second bedroom", "10'-1\u00bd\" \u00d7 11'-7\u00bd\""),
-            ("Attached toilet", "6'-0\" \u00d7 5'-0\""),
-            ("Second attached toilet", "4'-0\" \u00d7 7'-0\""),
-            ("Ground floor toilet", "4'-6\" \u00d7 5'-0\""),
-            ("Standing balcony", "2'-0\" wide, two"),
-            ("Also", "Store, wash area, otta, private terrace"),
+            ("plot_area", "703 {to} 994 sq ft"),
+            ("living", "16'-8\" × 15'-0\""),
+            ("kitchen", "9'-9½\" × 9'-1½\""),
+            ("master_bed", "11'-0\" × 12'-6\""),
+            ("second_bed", "10'-1½\" × 11'-7½\""),
+            ("attached_toilet", "6'-0\" × 5'-0\""),
+            ("second_attached_toilet", "4'-0\" × 7'-0\""),
+            ("ground_toilet", "4'-6\" × 5'-0\""),
+            ("standing_balcony", None),
+            ("also", None),
         ),
         # Which rows belong to which drawing. The PDF gives each floor a
         # page of its own, and a page that repeated all eleven rows beside
@@ -125,167 +145,83 @@ UNIT_TYPES = {
         "sheets": (
             {
                 "key": "ground",
-                "caption": "Ground floor",
-                "rows": ("Plot width", "Plot depth", "Plot area",
-                         "Living room / dining", "Kitchen",
-                         "Ground floor toilet", "Also"),
+                "rows": ("plot_width", "plot_depth", "plot_area",
+                         "living", "kitchen", "ground_toilet", "also"),
             },
             {
                 "key": "first",
-                "caption": "First floor",
-                "rows": ("Master bedroom", "Second bedroom",
-                         "Attached toilet", "Second attached toilet",
-                         "Standing balcony"),
+                "rows": ("master_bed", "second_bed", "attached_toilet",
+                         "second_attached_toilet", "standing_balcony"),
             },
         ),
     },
     "B": {
-        "label": "Type B",
-        "plots": "Plots 07\u201348",
+        "plot_range": "07–48",
         "rooms": (
-            ("Plot width", "18'-1\u00bd\" to 24'-8\"  [5.52 m to 7.52 m]"),
-            ("Plot depth", "39'-1\"  [11.91 m]"),
-            ("Plot area", "708 to 964 sq ft"),
-            ("Living room / dining", "17'-4\u00bd\" \u00d7 15'-0\""),
-            ("Kitchen", "10'-6\" \u00d7 8'-1\u00bd\""),
-            ("Master bedroom", "11'-0\" \u00d7 12'-6\""),
-            ("Second bedroom", "10'-1\u00bd\" \u00d7 10'-7\u00bd\""),
-            ("Attached toilet", "6'-0\" \u00d7 5'-0\""),
-            ("Second attached toilet", "4'-0\" \u00d7 7'-0\""),
-            ("Ground floor toilet", "4'-6\" \u00d7 5'-0\""),
-            ("Standing balcony", "2'-0\" wide, two"),
-            ("Also", "Store, wash area, otta, private terrace"),
+            ("plot_width", "18'-1½\" {to} 24'-8\"  "
+                           "[5.52 m {to} 7.52 m]"),
+            ("plot_depth", "39'-1\"  [11.91 m]"),
+            ("plot_area", "708 {to} 964 sq ft"),
+            ("living", "17'-4½\" × 15'-0\""),
+            ("kitchen", "10'-6\" × 8'-1½\""),
+            ("master_bed", "11'-0\" × 12'-6\""),
+            ("second_bed", "10'-1½\" × 10'-7½\""),
+            ("attached_toilet", "6'-0\" × 5'-0\""),
+            ("second_attached_toilet", "4'-0\" × 7'-0\""),
+            ("ground_toilet", "4'-6\" × 5'-0\""),
+            ("standing_balcony", None),
+            ("also", None),
         ),
         "sheets": (
             {
                 "key": "ground",
-                "caption": "Ground floor",
-                "rows": ("Plot width", "Plot depth", "Plot area",
-                         "Living room / dining", "Kitchen",
-                         "Ground floor toilet", "Also"),
+                "rows": ("plot_width", "plot_depth", "plot_area",
+                         "living", "kitchen", "ground_toilet", "also"),
             },
             {
                 "key": "first",
-                "caption": "First floor",
-                "rows": ("Master bedroom", "Second bedroom",
-                         "Attached toilet", "Second attached toilet",
-                         "Standing balcony"),
+                "rows": ("master_bed", "second_bed", "attached_toilet",
+                         "second_attached_toilet", "standing_balcony"),
             },
         ),
     },
 }
 
-SPEC_GROUPS = (
-    ("Structure", "As per architect and structure design."),
-    ("Wall finish", "Putty on internal walls. Exposed brick work on the front "
-                    "exterior wall as per architect design, exterior paint on "
-                    "other exterior walls."),
-    ("Flooring", "Vitrified flooring in all rooms with skirting. Anti-skid "
-                 "ceramic tiles in all balconies."),
-    ("Kitchen", "Granite platform with stainless steel sink, ceramic tiles up "
-                "to lintel level."),
-    ("Bathrooms", "Designer wall tiles up to lintel level, good quality sanitary "
-                  "and plumbing fixtures, stone door frame."),
-    ("Electrical", "Good quality modular switches, AC point in the master "
-                   "bedroom, geyser point in all bathrooms."),
-    ("Doors & windows", "Elegant main door and internal flush doors with laminate "
-                        "and stone frame. Colour-anodised aluminium windows with "
-                        "safety grills."),
-    ("Terrace", "Brick bed waterproofing treatment."),
-    ("Protection", "Anti-termite treatment at ground level. Overhead and "
-                   "underground water tanks."),
-)
 
-AMENITIES = (
-    "Impressive gate with security cabin",
-    "Large open-space parking",
-    "Underground cabling for a wire-free campus",
-    "Tremix concrete internal roads with paved sides",
-    "Roadside plantation and street lights",
-    "Rain water harvesting system",
-    "Garbage storage provision",
-    "Landscape garden with community hall",
-)
+def room_value(unit: dict, key: str, words) -> str:
+    """One schedule value, in the reader's language.
 
-LOCATION_ROWS = (
-    ("Road", "Main Waghodia Road frontage"),
-    ("Between", "Parul University and Sumandeep College"),
-    ("Next to", "Spunpipe & Construction Co."),
-    ("Area", "Kamlapura, Vadodara"),
-    ("Corridor", "Vadodara east, toward Halol"),
-)
-
-SECTIONS = (
-    {
-        "id": "cover",
-        "title": "Lake Tree Avenue",
-        "lead": "New Age Townhouses",
-        "body": ("A project by TAM Developers",
-                 "Waghodia Main Road, Vadodara"),
-    },
-    {
-        "id": "project",
-        "title": "Forty-eight homes on one quiet avenue",
-        "lead": "2 BHK townhouses in a gated campus off Waghodia Main Road.",
-        "body": (
-            "Lake Tree Avenue is a gated campus of 48 two-bedroom townhouses, "
-            "each with its own entrance, private terrace and parking.",
-            "A 12-metre town planning road brings you to the gate. Inside, "
-            "7.5-metre internal roads reach every door.",
-            "Two plan types: six homes in the entrance row, forty-two along the "
-            "avenue.",
-        ),
-    },
-    {
-        "id": "plans",
-        "title": "Floor plans",
-        "lead": "Ground and first floor, drawn to scale.",
-        "body": ("Living and dining with the kitchen at ground level, both "
-                 "bedrooms above, and the full terrace over them.",),
-    },
-    {
-        "id": "layout",
-        "title": "The site plan",
-        "lead": "Forty-eight plots, a common plot and a landscaped garden, "
-                "all inside one gated boundary.",
-        "body": ("Six homes stand in the entrance row; the other forty-two "
-                 "line the avenue behind them.",),
-    },
-    {
-        "id": "specs",
-        "title": "Specifications & campus",
-        "lead": "What is built in, before you move a thing.",
-        "body": (),
-    },
-    {
-        "id": "location",
-        "title": "Between Parul and Sumandeep",
-        "lead": "On the main Waghodia Road, in the stretch between Parul "
-                "University and Sumandeep College.",
-        "body": ("The gate opens onto the main road, so there is no approach "
-                 "lane to negotiate and no last-mile detour.",
-                 "Two of Vadodara's largest campuses sit either side of you, "
-                 "which is what keeps this stretch of road serviced, lit and "
-                 "in demand with tenants.",),
-    },
-    {
-        "id": "contact",
-        "title": "Come and see it",
-        "lead": "Price on call.",
-        "body": ("Site visits daily. Call or send a message on WhatsApp and we "
-                 "will share directions.",),
-    },
-)
+    The measurement itself is the same in every language -- Latin numerals,
+    feet and inches as the architect issued them. Only the words inside it
+    move: the range connector, and the two rows that are prose rather than
+    a figure.
+    """
+    template = dict(unit["rooms"])[key]
+    if template is None:
+        return words.ROOM_VALUE_WORDS[key]
+    return template.format(to=words.UI["range_to"])
 
 
-def sheet_rows(unit: dict, sheet: dict) -> tuple[tuple[str, str], ...]:
+def unit_rooms(unit: dict, words) -> tuple[tuple[str, str], ...]:
+    """A whole schedule, labelled and valued in the reader's language."""
+    return tuple((words.ROOM_LABELS[key], room_value(unit, key, words))
+                 for key, _ in unit["rooms"])
+
+
+def plots_label(unit: dict, words) -> str:
+    """"Plots 07–48", in the reader's language. The numbers never move."""
+    return words.PLOTS_LABEL.format(range=unit["plot_range"])
+
+
+def sheet_rows(unit: dict, sheet: dict, words) -> tuple[tuple[str, str], ...]:
     """The schedule rows belonging to one floor's drawing.
 
-    Raises on a row name that is not in the unit, so a renamed dimension
+    Raises on a row key that is not in the unit, so a renamed dimension
     cannot quietly drop off the page that was meant to carry it.
     """
     rooms = dict(unit["rooms"])
-    missing = [name for name in sheet["rows"] if name not in rooms]
+    missing = [key for key in sheet["rows"] if key not in rooms]
     if missing:
         raise KeyError(f"{sheet['key']} sheet lists unknown rows: {missing}")
-    return tuple((name, rooms[name]) for name in sheet["rows"])
+    return tuple((words.ROOM_LABELS[key], room_value(unit, key, words))
+                 for key in sheet["rows"])
