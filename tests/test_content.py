@@ -21,7 +21,27 @@ class TestFacts(unittest.TestCase):
 
     def test_developer_is_tam(self):
         self.assertEqual(content.PROJECT["developer"], "TAM Developers")
-        self.assertEqual(content.PROJECT["partners"], "Udit Talati & Kinjal Mehta")
+
+    def test_no_partner_name_is_available_to_the_renderers(self):
+        # Partner names are internal. Keeping them out of PROJECT entirely
+        # means a renderer cannot print them by accident.
+        self.assertNotIn("partners", content.PROJECT)
+
+    def test_private_names_are_guarded(self):
+        for name in ("Dhruv Talati", "Shalin Talati", "Kinjal Mehta"):
+            self.assertIn(name, content.PRIVATE_NAMES)
+
+    def test_guard_catches_a_partner_name_however_it_is_broken_up(self):
+        self.assertIn("Dhruv Talati",
+                      content.forbidden_hits("built by Dhruv\nTalati and co"))
+        self.assertIn("Shalin Talati",
+                      content.forbidden_hits("<td>Shalin</td><td>Talati</td>"))
+
+    def test_guard_catches_a_bare_partner_surname(self):
+        self.assertIn("Talati", content.forbidden_hits("a Talati family project"))
+
+    def test_credit_line_names_the_firm_only(self):
+        self.assertEqual(content.CREDIT, "A project by TAM Developers")
 
 
 class TestWhatsAppEncoding(unittest.TestCase):

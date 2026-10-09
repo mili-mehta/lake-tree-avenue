@@ -29,8 +29,9 @@ Two artefacts are produced from one content source:
 | Field | Value |
 |---|---|
 | Project | Lake Tree Avenue — New Age Townhouses |
-| Developer | TAM Developers (Talati & Mehta) |
-| Partners | Udit Talati & Kinjal Mehta |
+| Developer | TAM Developers |
+| Partners | Dhruv Talati, Shalin Talati and Kinjal Mehta — **internal record only, never published** |
+| Published credit | "A project by TAM Developers". No partner names, no "Talati & Mehta" expansion of the initials. |
 | Site address | Lake Tree Avenue, Waghodia Main Road, next to Spunpipe & Construction Co., Kamlapura, Vadodara |
 | Regd. office | 1-B Ramkrishna Chambers, BPC Road, Alkapuri, Vadodara 390007 |
 | Phone / WhatsApp | +91 87587 56666 (same number) |

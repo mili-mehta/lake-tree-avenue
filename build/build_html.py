@@ -414,8 +414,8 @@ def render_html() -> str:
         f'<a href="{content.mail_link()}">{_esc(p["email"])}</a></p></div>')
     out.append(f'<div><h3>Site</h3><p><a href="{p["maps_url"]}" target="_blank" '
                f'rel="noopener">{_esc(p["site_address"])}</a></p></div>')
-    out.append(f'<div><h3>{_esc(p["developer"])}</h3>'
-               f'<p>{_esc(p["partners"])}<br>{_esc(p["regd_office"])}</p></div>')
+    out.append(f'<div><h3>Developer</h3>'
+               f'<p>{_esc(content.CREDIT)}<br>{_esc(p["regd_office"])}</p></div>')
     out.append("</div>")
     out.append('<div class="actions" style="margin-top:34px">')
     out.append(f'<a class="btn" href="{wa}" target="_blank" rel="noopener">'
@@ -428,8 +428,7 @@ def render_html() -> str:
     # footer
     out.append('<footer><div class="wrap">')
     out.append(f'<img src="{logo_small}" alt="Lake Tree Avenue">')
-    out.append(f"<p>{_esc(p['developer'])}, a partnership of "
-               f"{_esc(p['partners'])}<br>{_esc(p['regd_office'])}</p>")
+    out.append(f"<p>{_esc(content.CREDIT)}<br>{_esc(p['regd_office'])}</p>")
     out.append("</div></footer>")
 
     # sticky bar

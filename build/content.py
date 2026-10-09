@@ -9,7 +9,6 @@ PROJECT = {
     "name": "Lake Tree Avenue",
     "tagline": "New Age Townhouses",
     "developer": "TAM Developers",
-    "partners": "Udit Talati & Kinjal Mehta",
     "phone_e164": "+918758756666",
     "phone_display": "+91 87587 56666",
     "email": "laketreeavenue@gmail.com",
@@ -22,6 +21,16 @@ PROJECT = {
     "unit_count": "48",
     "unit_type": "2 BHK townhouses",
 }
+
+CREDIT = "A project by TAM Developers"
+
+# Internal only. The owner credits the firm, never the individuals, so these
+# names must never reach a buyer-facing artefact. Bare surnames are listed too
+# because "a Talati family project" would carry the same information.
+PRIVATE_NAMES = (
+    "Dhruv Talati", "Shalin Talati", "Kinjal Mehta",
+    "Talati", "Mehta",
+)
 
 FORBIDDEN = (
     "Leo Enterprise", "RAA07983", "RERA", "Ajwa", "Sikandarpura",
@@ -39,7 +48,7 @@ def forbidden_hits(text: str) -> list[str]:
     """
     flat = re.sub(r"<[^>]+>", " ", text)
     flat = re.sub(r"\s+", " ", flat).lower()
-    return [term for term in FORBIDDEN
+    return [term for term in FORBIDDEN + PRIVATE_NAMES
             if re.sub(r"\s+", " ", term).lower() in flat]
 
 
@@ -137,7 +146,7 @@ SECTIONS = (
         "id": "cover",
         "title": "Lake Tree Avenue",
         "lead": "New Age Townhouses",
-        "body": ("New launch by TAM Developers",
+        "body": ("A project by TAM Developers",
                  "Waghodia Main Road, Vadodara"),
     },
     {

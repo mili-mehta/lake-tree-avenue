@@ -185,8 +185,7 @@ def _cover(doc, art):
     _text(page, fitz.Rect(MARGIN + 182, band_top + 34, 700, band_top + 96),
           content.PROJECT["name"], font=SERIF, size=34, color=INK)
     _text(page, fitz.Rect(MARGIN + 184, band_top + 86, 700, band_top + 140),
-          "A new launch by "
-          f"{content.PROJECT['developer']}\nWaghodia Main Road, Vadodara",
+          f"{content.CREDIT}\nWaghodia Main Road, Vadodara",
           font=SANS, size=10.5, color=INK_SOFT)
     _footer(page)
     return page
@@ -346,7 +345,7 @@ def _contact(doc, art):
     blocks = (
         ("Call or message", f"{p['phone_display']}\n{p['email']}"),
         ("Site", p["site_address"]),
-        (p["developer"], f"{p['partners']}\n{p['regd_office']}"),
+        ("Developer", f"{content.CREDIT}\n{p['regd_office']}"),
     )
     by = y + 96
     for i, (head, text) in enumerate(blocks):
