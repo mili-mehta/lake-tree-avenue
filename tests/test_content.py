@@ -19,6 +19,17 @@ class TestFacts(unittest.TestCase):
     def test_mail_link(self):
         self.assertEqual(content.mail_link(), "mailto:laketreeavenue@gmail.com")
 
+    def test_social_handle_is_the_same_on_both_networks(self):
+        # One handle covers Instagram and Facebook, so a caption or a print
+        # footer can name it once.
+        self.assertEqual(content.PROJECT["social_handle"], "@laketreeavenue")
+
+    def test_social_urls_point_at_that_handle(self):
+        for key in ("instagram_url", "facebook_url"):
+            url = content.PROJECT[key]
+            self.assertTrue(url.startswith("https://"), f"{key} not https")
+            self.assertIn("laketreeavenue", url, f"{key} is not the handle")
+
     def test_developer_is_tam(self):
         self.assertEqual(content.PROJECT["developer"], "TAM Developers")
 
@@ -57,6 +68,17 @@ class TestWhatsAppEncoding(unittest.TestCase):
 
 
 
+def _imperial(value):
+    """Every feet-and-inches measurement in a schedule value, in order."""
+    return re.findall(r"\d+'-\d+[½¼¾]?\"", value)
+
+
+def _feet(text):
+    text = text.replace("½", ".5").replace("¼", ".25").replace("¾", ".75")
+    feet, _, inches = text.replace('"', "").partition("'-")
+    return float(feet) + float(inches or 0) / 12
+
+
 class TestSupersededFacts(unittest.TestCase):
     def _all_strings(self):
         out = []
@@ -70,6 +92,7 @@ class TestSupersededFacts(unittest.TestCase):
         for t in content.UNIT_TYPES.values():
             out.append(t["label"]); out.append(t["plots"])
             out.extend(r for pair in t["rooms"] for r in pair)
+            out.extend(s["caption"] for s in t.get("sheets", ()))
         return out
 
     def test_no_forbidden_term_in_any_copy(self):
@@ -99,22 +122,137 @@ class TestStructure(unittest.TestCase):
         self.assertEqual(rooms["Second bedroom"], "10'-1½\" × 10'-7½\"")
         self.assertEqual(rooms["Living room / dining"], "17'-4½\" × 15'-0\"")
 
-    def test_type_b_plot_size_is_the_drawn_plot_not_a_dimension_segment(self):
-        # 25'-3" [7.70] is a segment of TYPE A's depth chain
-        # (1.85 + 7.70 + 2.75 = 12.30). Pairing it with Type B's depth
-        # advertises 91.7 m2 of land where the drawing gives 65.7 m2.
+    def test_type_b_plot_width_is_a_range_across_the_row(self):
+        # Both plots 07-48 sheets dimension the same adjacent pair, 24'-8"
+        # beside 18'-1½", so the row widths genuinely differ along the
+        # avenue and a single figure would be wrong for half of them.
         rooms = dict(content.UNIT_TYPES["B"]["rooms"])
-        self.assertEqual(rooms["Plot size"],
-                         "18'-1½\" × 39'-1\"  [5.52 m × 11.91 m]")
+        self.assertEqual(rooms["Plot width"],
+                         "18'-1½\" to 24'-8\"  [5.52 m to 7.52 m]")
 
-    def test_type_a_plot_size_matches_the_drawing(self):
+    def test_type_b_plot_depth_is_the_drawn_depth_not_a_chain_segment(self):
+        # 24'-3" [7.39] is a segment of the depth chain
+        # (1.52 + 7.39 + 3.00 = 11.91). Advertising it as the plot depth
+        # sells 65.7 m2 of land as 40.8 m2.
+        rooms = dict(content.UNIT_TYPES["B"]["rooms"])
+        self.assertEqual(rooms["Plot depth"], "39'-1\"  [11.91 m]")
+
+    def test_type_a_plot_width_is_a_range_across_the_six_plots(self):
+        # The two Type A sheets dimension different adjacent pairs: the
+        # ground floor sheet carries 20'-5" and 17'-5", the first floor
+        # sheet 24'-7½" and 18'-1½". A single width would be wrong for
+        # four of the six plots, so the schedule gives the range.
         rooms = dict(content.UNIT_TYPES["A"]["rooms"])
-        self.assertEqual(rooms["Plot size"],
-                         "17'-5\" × 40'-4½\"  [5.31 m × 12.30 m]")
+        self.assertEqual(rooms["Plot width"],
+                         "17'-5\" to 24'-7½\"  [5.31 m to 7.51 m]")
+
+    def test_type_a_plot_depth_is_the_drawn_depth(self):
+        rooms = dict(content.UNIT_TYPES["A"]["rooms"])
+        self.assertEqual(rooms["Plot depth"], "40'-4½\"  [12.30 m]")
+
+    def test_type_a_first_floor_dimensions_match_the_drawing(self):
+        # Read off the plots 01-06 first floor sheet. These three rows used
+        # to disagree with the drawing printed beside them.
+        rooms = dict(content.UNIT_TYPES["A"]["rooms"])
+        self.assertEqual(rooms["Master bedroom"], "11'-0\" × 12'-6\"")
+        self.assertEqual(rooms["Second bedroom"], "10'-1½\" × 11'-7½\"")
+        self.assertEqual(rooms["Attached toilet"], "6'-0\" × 5'-0\"")
+        self.assertEqual(rooms["Second attached toilet"], "4'-0\" × 7'-0\"")
+
+    def test_type_a_ground_floor_dimensions_match_the_drawing(self):
+        rooms = dict(content.UNIT_TYPES["A"]["rooms"])
+        self.assertEqual(rooms["Living room / dining"], "16'-8\" × 15'-0\"")
+        self.assertEqual(rooms["Kitchen"], "9'-9½\" × 9'-1½\"")
+        self.assertEqual(rooms["Ground floor toilet"], "4'-6\" × 5'-0\"")
+
+    def test_both_types_are_drawn_ground_floor_then_first_floor(self):
+        for key, unit in content.UNIT_TYPES.items():
+            sheets = unit["sheets"]
+            self.assertEqual([s["key"] for s in sheets], ["ground", "first"],
+                             f"Type {key} sheet order")
+            self.assertEqual([s["caption"] for s in sheets],
+                             ["Ground floor", "First floor"], f"Type {key}")
+
+    def test_every_row_sits_on_exactly_one_sheet(self):
+        # A row on neither sheet never reaches the PDF; a row on both is
+        # printed twice with no drawing to justify it.
+        for key, unit in content.UNIT_TYPES.items():
+            listed = [name for sheet in unit["sheets"] for name in sheet["rows"]]
+            self.assertEqual(sorted(listed),
+                             sorted(name for name, _ in unit["rooms"]),
+                             f"Type {key} sheets do not cover its schedule")
+            self.assertEqual(len(listed), len(set(listed)),
+                             f"Type {key} repeats a row across both sheets")
+
+    def test_sheet_rows_resolves_in_sheet_order(self):
+        unit = content.UNIT_TYPES["A"]
+        rows = content.sheet_rows(unit, unit["sheets"][1])
+        self.assertEqual(rows[0], ("Master bedroom", "11'-0\" × 12'-6\""))
+        self.assertEqual([name for name, _ in rows],
+                         list(unit["sheets"][1]["rows"]))
+
+    def test_sheet_rows_rejects_a_row_the_unit_does_not_have(self):
+        unit = content.UNIT_TYPES["A"]
+        with self.assertRaises(KeyError):
+            content.sheet_rows(unit, {"key": "x", "rows": ("Wine cellar",)})
+
+    def test_bedrooms_are_scheduled_on_the_upper_floor(self):
+        # Both bedrooms are drawn upstairs in both types. Listing one
+        # beside the ground floor plan contradicts the drawing next to it.
+        for key, unit in content.UNIT_TYPES.items():
+            ground = unit["sheets"][0]["rows"]
+            self.assertFalse([r for r in ground if "bedroom" in r.lower()],
+                             f"Type {key} schedules a bedroom on the ground floor")
+
+    def test_a_note_explains_that_each_sheet_draws_two_homes(self):
+        # Every sheet draws an adjacent pair, so a reader sees two kitchens
+        # and two staircases. Without a note the schedule beside it reads
+        # as covering both, and the plot area is the figure that misleads.
+        note = content.PLAN_PAIR_NOTE
+        self.assertIn("two", note.lower())
+        self.assertIn("one home", note.lower())
+
+    def test_both_types_state_a_plot_area_in_square_feet(self):
+        for key, unit in content.UNIT_TYPES.items():
+            area = dict(unit["rooms"]).get("Plot area")
+            self.assertIsNotNone(area, f"Type {key} states no plot area")
+            self.assertIn("sq ft", area, f"Type {key} area is not in square feet")
+
+    def test_plot_area_is_the_width_range_times_the_depth(self):
+        # The area is the one figure a buyer compares between projects, and
+        # it is the one nobody can check by eye. Derive it from the two
+        # dimensions printed beside it rather than trusting the literal.
+        for key, unit in content.UNIT_TYPES.items():
+            rooms = dict(unit["rooms"])
+            lo_w, hi_w = (_feet(t) for t in _imperial(rooms["Plot width"]))
+            depth = _feet(_imperial(rooms["Plot depth"])[0])
+            got_lo, got_hi = (int(n) for n in
+                              re.findall(r"(\d+) to (\d+) sq ft",
+                                         rooms["Plot area"])[0])
+            for got, want in ((got_lo, lo_w * depth), (got_hi, hi_w * depth)):
+                self.assertLessEqual(got, want,
+                                     f"Type {key} overstates the plot area")
+                self.assertGreater(got, want - 1.0,
+                                   f"Type {key} understates the plot area by "
+                                   f"more than a square foot")
+
+    def test_plot_area_is_scheduled_with_the_ground_floor(self):
+        for key, unit in content.UNIT_TYPES.items():
+            self.assertIn("Plot area", unit["sheets"][0]["rows"], f"Type {key}")
+
+    def test_both_types_state_a_plot_width_and_a_plot_depth(self):
+        for key, unit in content.UNIT_TYPES.items():
+            rooms = dict(unit["rooms"])
+            self.assertIn("Plot width", rooms, f"Type {key}")
+            self.assertIn("Plot depth", rooms, f"Type {key}")
+            self.assertNotIn("Plot size", rooms,
+                             f"Type {key} still states one plot size")
 
     def test_no_type_advertises_a_dimension_chain_segment_as_a_plot_size(self):
         for key, unit in content.UNIT_TYPES.items():
-            plot = dict(unit["rooms"])["Plot size"]
+            plot = " ".join(value for label, value in unit["rooms"]
+                            if label.startswith("Plot"))
+            self.assertTrue(plot, f"Type {key} states no plot dimension")
             self.assertNotIn("7.70", plot, f"Type {key} reuses a depth segment")
             self.assertNotIn("25'-3", plot, f"Type {key} reuses a depth segment")
 
@@ -145,10 +283,22 @@ class TestLocation(unittest.TestCase):
         self.assertIn("Parul University", rows["Between"])
         self.assertIn("Sumandeep", rows["Between"])
 
-    def test_maps_query_points_at_the_stretch_of_road(self):
-        self.assertIn("Waghodia", content.PROJECT["maps_url"])
+    def test_maps_url_carries_the_exact_site_coordinates(self):
+        # The pin the owner shared, to the digit. A text search would let
+        # Google choose a point on Waghodia Road; this does not.
+        self.assertEqual(content.SITE_LATLNG, "22.2918248,73.3433214")
+        self.assertEqual(content.PROJECT["site_latlng"], content.SITE_LATLNG)
+        self.assertIn("22.2918248%2C73.3433214", content.PROJECT["maps_url"])
+
+    def test_maps_url_opens_directions_not_a_search(self):
+        # api=1 "dir" is the documented universal form: the Maps app takes
+        # it over from the browser and starts routing to the destination.
         self.assertTrue(content.PROJECT["maps_url"].startswith(
-            "https://www.google.com/maps/search/?api=1&query="))
+            "https://www.google.com/maps/dir/?api=1&destination="))
+        self.assertIn("travelmode=driving", content.PROJECT["maps_url"])
+        self.assertNotIn("/maps/search/", content.PROJECT["maps_url"])
+        # Short links are redirects, and redirects rot. Print numbers.
+        self.assertNotIn("goo.gl", content.PROJECT["maps_url"])
 
 
 class TestForbiddenGuard(unittest.TestCase):

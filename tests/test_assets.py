@@ -74,8 +74,10 @@ class TestPlanCrops(unittest.TestCase):
     def setUp(self):
         self.crops = assets.plan_crops()
 
-    def test_three_crops_produced(self):
-        self.assertEqual(sorted(self.crops), ["A", "B", "elevation"])
+    def test_only_the_crops_still_consumed_are_produced(self):
+        # Both unit types are drawn from their own dedicated sheets now.
+        # Only the elevation pair has no source but the layout page.
+        self.assertEqual(sorted(self.crops), ["elevation"])
 
     def test_crops_are_non_trivial_images(self):
         for key, blob in self.crops.items():
@@ -104,6 +106,79 @@ class TestPlanCrops(unittest.TestCase):
             img = _open(blob).convert("L")
             extrema = img.getextrema()
             self.assertLess(extrema[0], 200, f"{key} crop looks blank")
+
+
+class TestPlanSheets(unittest.TestCase):
+    """The dedicated floor plan drawings, ground floor first, per type."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.sheets = {key: assets.plan_sheets(key)
+                      for key in assets.PLAN_SHEET_SRCS}
+
+    def _every_sheet(self):
+        for unit_key, sheets in self.sheets.items():
+            for floor, blob in sheets.items():
+                yield f"{unit_key} {floor}", blob
+
+    def test_both_types_have_both_floors_ground_first(self):
+        self.assertEqual(sorted(self.sheets), ["A", "B"])
+        for unit_key, sheets in self.sheets.items():
+            self.assertEqual(list(sheets), ["ground", "first"], unit_key)
+
+    def test_sheets_keep_every_pixel_the_source_has(self):
+        # Resampling to a nominal "brochure width" would upscale the
+        # portrait sheets: more bytes, no more detail, and the room
+        # dimensions are the first thing to turn to mush.
+        for unit_key, srcs in assets.PLAN_SHEET_SRCS.items():
+            for floor, src in srcs:
+                want = assets._trim_white(Image.open(src).convert("RGB"))
+                got = _open(self.sheets[unit_key][floor])
+                self.assertEqual(got.size, want.size,
+                                 f"{unit_key} {floor} was resampled")
+
+    def test_sheets_are_encoded_well_enough_to_read_the_dimensions(self):
+        # The room dimensions are 4 px strokes of dark text on a pale floor.
+        # A thrifty JPEG smears them. Compression must stay light enough
+        # that the drawing keeps a hard black and a clean white.
+        for key, blob in self._every_sheet():
+            lo, hi = _open(blob).convert("L").getextrema()
+            self.assertLess(lo, 70, f"{key} sheet lost its darkest ink")
+            self.assertGreater(hi, 230, f"{key} sheet lost its paper")
+            pixels = _open(blob).width * _open(blob).height
+            self.assertGreater(len(blob) / pixels, 0.15,
+                               f"{key} sheet compressed too hard to read")
+
+    def test_sheets_are_trimmed_to_their_ink(self):
+        # The source PNGs carry a white surround. Left in, the drawing
+        # floats in its frame and reads smaller than it needs to.
+        #
+        # The crops next door assert ink on the outermost row of pixels.
+        # These sheets cannot: their outermost ink is a dimension line one
+        # stroke thick, which a sampled edge steps over and a JPEG lifts a
+        # shade or two anyway. What matters is that no band of dead paper
+        # survived, so the finished sheet is re-trimmed and must barely move.
+        for key, blob in self._every_sheet():
+            img = _open(blob)
+            again = assets._trim_white(img)
+            self.assertLess(img.width - again.width, 10,
+                            f"{key} sheet keeps a blank side margin")
+            self.assertLess(img.height - again.height, 10,
+                            f"{key} sheet keeps a blank top or bottom margin")
+
+    def test_sheets_are_not_blank(self):
+        for key, blob in self._every_sheet():
+            self.assertLess(_open(blob).convert("L").getextrema()[0], 200,
+                            f"{key} sheet looks blank")
+
+    def test_every_sheet_is_a_distinct_drawing(self):
+        blobs = [blob for _, blob in self._every_sheet()]
+        self.assertEqual(len(blobs), 4)
+        self.assertEqual(len(set(blobs)), 4, "a sheet is used twice")
+
+    def test_sheets_under_budget(self):
+        for key, blob in self._every_sheet():
+            self.assertLess(len(blob), 700_000, key)
 
 
 class TestDataUri(unittest.TestCase):

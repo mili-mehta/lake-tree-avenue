@@ -16,6 +16,20 @@ RENDER_SRC = os.path.join(ROOT, "images", "lake-tree-avenue.jpg")
 LAYOUT_SRC = os.path.join(ROOT, "REV.LAYOUT - 07-10-2026.pdf")
 SITE_PLAN_SRC = os.path.join(ROOT, "images", "site-plan.png")
 
+# The floor plans as issued: one sheet per floor per unit type, each
+# showing an adjacent pair of townhouses. Ground floor first, the order a
+# visitor walks the house in.
+def _plan_src(name: str) -> str:
+    return os.path.join(ROOT, "images", name)
+
+
+PLAN_SHEET_SRCS = {
+    "A": (("ground", _plan_src("plot-1-6-ground-floor-plan.png")),
+          ("first", _plan_src("plot-1-6-first-floor-plan.png"))),
+    "B": (("ground", _plan_src("plot-7-48-ground-floor-plan.png")),
+          ("first", _plan_src("plot-7-48-first-floor-plan.png"))),
+}
+
 _WHITE = 247  # a channel value above this counts as blank paper
 
 # The drawing sheet carries the site plan in its upper two thirds and a strip
@@ -28,9 +42,11 @@ SITE_BOX = (0.020, 0.055, 0.980, 0.775)
 # carries two floor-plan sets and the elevation pair. Each box only has to
 # contain its drawing and none of its neighbour's; the exact frame comes from
 # trimming blank paper afterwards, so a caption is never clipped.
+# Neither unit type is cropped from this strip any more: both have their
+# own full-resolution sheets, which is the only way the room dimensions
+# printed inside them survive to the page. The elevation pair has no
+# separate source, so it is still lifted from here.
 PLAN_BOXES = {
-    "A": (0.075, 0.790, 0.322, 0.920),
-    "B": (0.330, 0.765, 0.580, 0.920),
     "elevation": (0.592, 0.765, 0.862, 0.920),
 }
 
@@ -133,7 +149,33 @@ def site_plan_jpeg(width: int = 1500, quality: int = 82) -> bytes:
     return _encode(img, "JPEG", quality=quality, optimize=True, progressive=True)
 
 
-def plan_crops(width: int = 2400, quality: int = 82) -> dict[str, bytes]:
+def plan_sheets(unit_key: str, quality: int = 92) -> dict[str, bytes]:
+    """One unit type's floor plans, ground floor first.
+
+    These are kept at the resolution they arrived at. The sources run
+    1050-1350 px across, and the figures that matter to a buyer -- 9'-9" x
+    9'-1", 4'-6" x 5'-0" -- are a few pixels tall inside them, so there is
+    nothing to spend on a downscale and everything to lose. Quality is set well
+    above the photographic images for the same reason: the drawings are
+    fine dark text over pale floor tiles, which is what JPEG smears first.
+    """
+    out = {}
+    for key, src in PLAN_SHEET_SRCS[unit_key]:
+        img = _trim_white(Image.open(src).convert("RGB"))
+        out[key] = _encode(img, "JPEG", quality=quality, optimize=True,
+                           progressive=True)
+    return out
+
+
+def plan_crops(width: int = 7200, quality: int = 90) -> dict[str, bytes]:
+    """Drawings lifted off the layout sheet, at a width you can read them at.
+
+    `width` is the whole layout page; each crop keeps about a fifth of it.
+    The page is vector, so rendering it larger recovers real detail rather
+    than inventing it, and these crops carry room dimensions set in type a
+    couple of millimetres tall. At the old 2400 the Type B plan reached the
+    brochure 514 px wide and those figures were a smudge.
+    """
     full = _layout_pixmap(width)
     w, h = full.size
     out = {}

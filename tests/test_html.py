@@ -23,7 +23,9 @@ class TestHtml(unittest.TestCase):
                 continue
             self.assertTrue(
                 url.startswith("https://wa.me/")
-                or url.startswith("https://www.google.com/maps/"),
+                or url.startswith("https://www.google.com/maps/")
+                or url in (content.PROJECT["instagram_url"],
+                           content.PROJECT["facebook_url"]),
                 f"external subresource: {url}",
             )
 
@@ -31,6 +33,12 @@ class TestHtml(unittest.TestCase):
         for banned in ("fetch(", "XMLHttpRequest", "serviceWorker",
                        'type="module"', "import("):
             self.assertNotIn(banned, self.html, f"file:// hostile API: {banned}")
+
+    def test_contact_links_each_social_profile_by_handle(self):
+        for key in ("instagram_url", "facebook_url"):
+            self.assertIn(f'href="{content.PROJECT[key]}"', self.html,
+                          f"{key} is not clickable")
+        self.assertIn(content.PROJECT["social_handle"], self.markup)
 
     def test_no_per_plot_links(self):
         # The plots are near-identical, so 48 separate enquiry links were
@@ -44,6 +52,15 @@ class TestHtml(unittest.TestCase):
 
     def test_address_opens_google_maps(self):
         self.assertIn(content.PROJECT["maps_url"], self.html)
+
+    def test_every_maps_link_is_the_directions_url(self):
+        # One pin, one URL. A stray search link would drop the reader on a
+        # guessed point of Waghodia Road with no route running.
+        links = re.findall(r'href="(https://www\.google\.com/maps/[^"]*)"',
+                           self.html)
+        self.assertTrue(links, "no Google Maps link in the page")
+        for url in links:
+            self.assertEqual(url, content.PROJECT["maps_url"])
 
     def test_primary_ctas_present(self):
         self.assertIn(content.tel_link(), self.html)
@@ -88,6 +105,58 @@ class TestHtml(unittest.TestCase):
         self.assertIn('class="plan-pane pane-b"', self.markup)
         for label in ("tab-a", "tab-b"):
             self.assertIn(f'<label for="{label}"', self.markup)
+
+    def _pane(self, key):
+        """The markup of one plan tab, bounded by the next pane or section."""
+        after = self.markup.split(f'class="plan-pane pane-{key}"')[1]
+        for boundary in ('class="plan-pane', '<section'):
+            after = after.split(boundary)[0]
+        return after
+
+    def test_both_panes_show_ground_floor_then_first_floor(self):
+        for key in ("a", "b"):
+            pane = self._pane(key)
+            self.assertEqual(pane.count('class="plan-sheet"'), 2,
+                             f"pane {key}: expected a ground and a first floor")
+            self.assertIn("Ground floor", pane)
+            self.assertIn("First floor", pane)
+            self.assertLess(pane.index("Ground floor"),
+                            pane.index("First floor"),
+                            f"pane {key} puts the first floor first")
+
+    def test_each_pane_says_it_draws_two_adjacent_homes(self):
+        for key in ("a", "b"):
+            self.assertIn(content.PLAN_PAIR_NOTE, self._pane(key),
+                          f"pane {key} does not say the sheet shows a pair")
+
+    def test_each_pane_names_its_own_plots_in_its_alt_text(self):
+        for key, plots in (("a", "plots 01–06"), ("b", "plots 07–48")):
+            alts = re.findall(r'alt="([^"]+)"', self._pane(key))
+            self.assertEqual(len(alts), 2, f"pane {key}")
+            for alt in alts:
+                self.assertIn(plots, alt, f"pane {key} alt text: {alt!r}")
+
+    def test_each_plan_sheet_has_its_own_alt_text(self):
+        # Two sheets sharing one alt text tells a screen reader nothing
+        # about which floor it is on.
+        for key in ("a", "b"):
+            alts = re.findall(r'alt="([^"]+)"', self._pane(key))
+            self.assertEqual(len(set(alts)), 2,
+                             f"pane {key} duplicate alt text: {alts}")
+            self.assertTrue(any("ground floor" in a.lower() for a in alts), alts)
+            self.assertTrue(any("first floor" in a.lower() for a in alts), alts)
+
+    def test_no_pane_reuses_another_pane_drawing(self):
+        # Both panes carry two sheets now. A copy-paste that pointed Type B
+        # at Type A's drawings would still render and still look right.
+        srcs = re.findall(r'<img src="(data:[^"]+)"', self.html)
+        plans = [u for u in srcs if len(u) > 100_000]
+        self.assertGreaterEqual(len(plans), 4)
+        self.assertEqual(len(plans), len(set(plans)), "a drawing is reused")
+
+    def test_both_tab_labels_survive_unchanged(self):
+        self.assertIn(">Plots 01–06<", self.markup)
+        self.assertIn(">Plots 07–48<", self.markup)
 
     def test_under_size_budget(self):
         self.assertLess(len(self.html.encode("utf-8")), 6 * 1024 * 1024)

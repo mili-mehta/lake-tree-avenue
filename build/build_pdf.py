@@ -124,7 +124,7 @@ def _footer(page):
         (f"WhatsApp {p['phone_display']}",
          content.wa_link("Hi, I'd like to know more about Lake Tree Avenue.")),
         (p["email"], content.mail_link()),
-        ("Open in Google Maps", p["maps_url"]),
+        ("Directions on Google Maps", p["maps_url"]),
     )
     for i, (label, uri) in enumerate(cells):
         rect = fitz.Rect(MARGIN + i * width, FOOTER_TOP + 8,
@@ -145,22 +145,35 @@ def _heading(page, title, lead, *, y=MARGIN, width=430.0):
 def _schedule(page, rows, x, y, width, *, label_w=150.0, size=9.5, pitch=26.0):
     """Hairline-ruled fact table, the drawing sheet's own way of listing.
 
+    A row is `pitch` deep unless its value wraps, in which case the row
+    grows to hold every line. Fixed-pitch rows were fine while every value
+    was a single dimension; "17'-5" to 24'-7½" [5.31 m to 7.51 m]" takes
+    two lines in a narrow column, and the second one used to be drawn
+    across the rule and into the row below.
+
     Raises if the table would run into the footer: a schedule that silently
-    outgrows its page drops its last rows, and on the plans page that is the
+    outgrows its page drops its last rows, and on a plans page that is the
     plot size.
     """
-    end = y + pitch * len(rows)
-    if end > FOOTER_TOP - 6:
-        raise LayoutOverflow(
-            f"schedule of {len(rows)} rows ends at {end:.0f} pt, past the "
-            f"footer at {FOOTER_TOP:.0f} pt")
     for key, value in rows:
         _line(page, x, y, x + width)
         _text(page, fitz.Rect(x, y + 5, x + label_w, y + 5 + pitch), key,
               font=SANS, size=size, color=INK_SOFT)
-        _text(page, fitz.Rect(x + label_w, y + 5, x + width, y + 9 + pitch),
-              value, font=SERIF, size=size + 0.5, color=INK)
-        y += pitch
+        # insert_textbox returns the space it did not use, so measuring the
+        # wrap means giving it room to wrap into and subtracting.
+        box = pitch * 4
+        remaining = _text(
+            page, fitz.Rect(x + label_w, y + 5, x + width, y + 5 + box),
+            value, font=SERIF, size=size + 0.5, color=INK)
+        if remaining < 0:
+            raise LayoutOverflow(
+                f"schedule value {value!r} for {key!r} does not fit a "
+                f"{width - label_w:.0f} pt column (short by {abs(remaining):.1f} pt)")
+        y += max(pitch, box - remaining + 9)
+        if y > FOOTER_TOP - 6:
+            raise LayoutOverflow(
+                f"schedule row {key!r} ends at {y:.0f} pt, past the footer "
+                f"at {FOOTER_TOP:.0f} pt")
     _line(page, x, y, x + width)
     return y
 
@@ -240,24 +253,63 @@ def _elevation(doc, art):
     return page
 
 
-def _plans(doc, art):
+# Everything the schedule column needs, so the drawing can have the rest.
+# Two drawings sharing one page would each come out around half this wide,
+# and the room dimensions printed inside them are only legible near full
+# size. The Type A sheets are portrait and the Type B sheets landscape, so
+# the drawing is given the whole box and fitted to its own aspect inside it.
+PLAN_TEXT_W = 270.0
+PLAN_TEXT_GAP = 34.0
+PLAN_IMAGE_W = PAGE_SIZE[0] - 2 * MARGIN - PLAN_TEXT_GAP - PLAN_TEXT_W
+
+
+def _plan_page(doc, art, *, unit, caption, blob, rows):
+    """One drawing at the largest size the page allows, its schedule beside.
+
+    The plans are the one page a buyer zooms into, so the drawing takes the
+    full height of the page and the text takes the column that is left,
+    rather than the drawing being sized to whatever the text leaves over.
+    """
     page = _page(doc)
     s = art["sections"]["plans"]
-    y = _heading(page, s["title"], s["lead"])
-    half = (PAGE_SIZE[0] - 2 * MARGIN - 30) / 2
-    for i, key in enumerate(("A", "B")):
-        unit = content.UNIT_TYPES[key]
-        x = MARGIN + i * (half + 30)
-        _text(page, fitz.Rect(x, y, x + half, y + 20),
-              f"{unit['label']}, {unit['plots'].lower()}",
-              font=SANS_BOLD, size=9.5, color=TERRA_DEEP)
-        placed = _place_image(page, art["crop_" + key],
-                              fitz.Rect(x, y + 18, x + half, y + 162),
-                              pad=9, frame=True)
-        _schedule(page, unit["rooms"], x, placed.y1 + 22, half,
-                  label_w=124.0, size=8.5, pitch=20.0)
+    _place_image(page, blob,
+                 fitz.Rect(MARGIN, MARGIN, MARGIN + PLAN_IMAGE_W, FOOTER_TOP),
+                 pad=9, frame=True)
+
+    tx = MARGIN + PLAN_IMAGE_W + PLAN_TEXT_GAP
+    tw = PLAN_TEXT_W
+    _text(page, fitz.Rect(tx, MARGIN, tx + tw, MARGIN + 42), s["title"],
+          font=SERIF, size=23, color=INK)
+    _text(page, fitz.Rect(tx, MARGIN + 40, tx + tw, MARGIN + 58),
+          f"{unit['label']}, {unit['plots'].lower()}",
+          font=SANS_BOLD, size=9.5, color=TERRA_DEEP)
+    _text(page, fitz.Rect(tx, MARGIN + 60, tx + tw, MARGIN + 86), caption,
+          font=SERIF, size=15, color=INK_SOFT)
+    if _text(page, fitz.Rect(tx, MARGIN + 90, tx + tw, MARGIN + 128),
+             content.PLAN_PAIR_NOTE, font=SANS, size=8.5, color=INK_SOFT,
+             leading=1.35) < 0:
+        raise LayoutOverflow("the plan pair note does not fit its box")
+    _schedule(page, rows, tx, MARGIN + 136, tw,
+              label_w=138.0, size=9.5, pitch=26.0)
     _footer(page)
     return page
+
+
+def _plans(doc, art):
+    """A page per floor per unit type, ground floor first within each.
+
+    Both types are drawn on issued sheets of their own rather than the
+    strip of small plans on the layout page, and each sheet shows an
+    adjacent pair of townhouses, so each one is worth a page.
+    """
+    pages = []
+    for key, unit in content.UNIT_TYPES.items():
+        for sheet in unit["sheets"]:
+            pages.append(_plan_page(
+                doc, art, unit=unit, caption=sheet["caption"],
+                blob=art["sheet_%s_%s" % (key, sheet["key"])],
+                rows=content.sheet_rows(unit, sheet)))
+    return pages
 
 
 def _layout(doc, art):
@@ -341,7 +393,7 @@ def _location(doc, art):
               PAGE_SIZE[0] - MARGIN - 440.0, label_w=96.0)
     rect = fitz.Rect(MARGIN, y + 150, MARGIN + 190, y + 178)
     page.draw_rect(rect, color=TERRA, width=1.2)
-    _text(page, rect + (12, 8, 0, 0), "Open in Google Maps", font=SANS_BOLD,
+    _text(page, rect + (12, 8, 0, 0), "Get directions", font=SANS_BOLD,
           size=9.5, color=TERRA_DEEP)
     page.insert_link({"kind": fitz.LINK_URI, "from": rect, "uri": p["maps_url"]})
     _footer(page)
@@ -372,6 +424,20 @@ def _contact(doc, art):
         _text(page, fitz.Rect(x, by + 24, x + col_w, by + 110), text,
               font=SERIF, size=10.5, color=INK, leading=1.4)
 
+    # Follow takes a row of its own: each profile needs its own link rect,
+    # and one textbox of two lines can only carry one.
+    fy = by + 124
+    _line(page, MARGIN, fy, MARGIN + col_w)
+    _text(page, fitz.Rect(MARGIN, fy + 7, MARGIN + col_w, fy + 24), "Follow",
+          font=SANS_BOLD, size=8.5, color=INK_SOFT)
+    profiles = ((f"Instagram {p['social_handle']}", p["instagram_url"]),
+                (f"Facebook {p['social_handle']}", p["facebook_url"]))
+    for j, (label, uri) in enumerate(profiles):
+        rect = fitz.Rect(MARGIN, fy + 24 + j * 20,
+                         MARGIN + col_w, fy + 45 + j * 20)
+        _text(page, rect, label, font=SERIF, size=10.5, color=TERRA_DEEP)
+        page.insert_link({"kind": fitz.LINK_URI, "from": rect, "uri": uri})
+
     _place_image(page, art["logo"],
                  fitz.Rect(MARGIN, FOOTER_TOP - 96, MARGIN + 116,
                            FOOTER_TOP - 18))
@@ -380,19 +446,19 @@ def _contact(doc, art):
 
 
 def build_doc() -> fitz.Document:
-    crops = assets.plan_crops()
     art = {
         "logo": assets.logo_png(420),
         "render": assets.render_jpeg(1800),
         "site": assets.site_plan_jpeg(1500),
-        "crop_A": crops["A"],
-        "crop_B": crops["B"],
-        "elevation": crops["elevation"],
+        "elevation": assets.plan_crops()["elevation"],
         "sections": {s["id"]: s for s in content.SECTIONS},
     }
+    for key in content.UNIT_TYPES:
+        for floor, blob in assets.plan_sheets(key).items():
+            art[f"sheet_{key}_{floor}"] = blob
     doc = fitz.open()
-    for builder in (_cover, _project, _elevation, _plans, _layout, _specs,
-                    _location, _contact):
+    for builder in (_cover, _project, _elevation, _plans,
+                    _layout, _specs, _location, _contact):
         builder(doc, art)
     doc.set_metadata({
         "title": content.PROJECT["name"],
