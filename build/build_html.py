@@ -64,7 +64,7 @@ p:last-child { margin-bottom: 0; }
   padding: 56px 28px 48px;
   display: flex; flex-direction: column; justify-content: center;
 }
-.hero-logo { width: 196px; margin-bottom: 36px; mix-blend-mode: multiply; }
+.hero-logo { width: 196px; margin-bottom: 36px; }
 .hero h1 { margin-bottom: 18px; }
 .hero-sub {
   font-family: var(--sans); font-size: 0.95rem; letter-spacing: 0.04em;
@@ -207,7 +207,7 @@ section { padding: 84px 0; }
 
 footer { padding: 46px 0 120px; border-top: 1px solid var(--rule);
   font-family: var(--sans); font-size: 0.86rem; color: var(--ink-soft); }
-footer img { width: 128px; margin-bottom: 18px; mix-blend-mode: multiply; }
+footer img { width: 128px; margin-bottom: 18px; }
 
 /* ---------- sticky bar, phones only ---------- */
 .bar { position: fixed; left: 0; right: 0; bottom: 0; display: flex;

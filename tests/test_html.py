@@ -68,6 +68,22 @@ class TestHtml(unittest.TestCase):
             luma = 0.2126 * r + 0.7152 * g + 0.0722 * b
             self.assertGreater(luma, 120, f"dark background #{hexcode}")
 
+    def test_plan_toggle_is_css_only_and_symmetric(self):
+        # The toggle must work with scripting unavailable, so it is radio
+        # inputs plus sibling selectors. Both directions must be wired.
+        self.assertIn('id="tab-a"', self.markup)
+        self.assertIn('id="tab-b"', self.markup)
+        self.assertEqual(self.markup.count(' checked>'), 1,
+                         "exactly one plan tab starts selected")
+        self.assertIn("#tab-a:checked ~ .plan-panes .pane-a { display: block; }",
+                      self.markup)
+        self.assertIn("#tab-b:checked ~ .plan-panes .pane-b { display: block; }",
+                      self.markup)
+        self.assertIn('class="plan-pane pane-a"', self.markup)
+        self.assertIn('class="plan-pane pane-b"', self.markup)
+        for label in ("tab-a", "tab-b"):
+            self.assertIn(f'<label for="{label}"', self.markup)
+
     def test_under_size_budget(self):
         self.assertLess(len(self.html.encode("utf-8")), 6 * 1024 * 1024)
 
