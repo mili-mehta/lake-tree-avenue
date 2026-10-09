@@ -197,6 +197,11 @@ section { padding: 84px 0; }
   margin-top: 14px; display: flex; gap: 22px; flex-wrap: wrap;
 }
 
+/* The key plan, edge to edge. It sits between two .wrap columns inside
+   a banded section, so it needs no negative margins -- it is simply not
+   wrapped. The vertical rules separate it from the prose either side. */
+.key-plan-figure { margin: 26px 0 0; }
+
 /* The key plan's distances, set as text under the drawing. The drawing
    carries them too, as artwork; these are the copy a screen reader
    reaches, a search engine indexes and a reader can select and send on. */
@@ -429,6 +434,12 @@ ICONS = {
         _STROKE,
         '<path d="M3.5 5.5h17v13h-17z"/><path d="m4 6.5 8 6 8-6"/>'
     ),
+    "globe": (
+        _STROKE,
+        '<circle cx="12" cy="12" r="9"/><path d="M3.3 9.2h17.4"/>'
+        '<path d="M3.3 14.8h17.4"/>'
+        '<path d="M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18z"/>'
+    ),
 }
 
 
@@ -452,7 +463,7 @@ def _imagery() -> dict:
     out = {
         "hero": (assets.render_jpeg(1600), "image/jpeg"),
         "site-plan": (assets.site_plan_jpeg(1500), "image/jpeg"),
-        "key-plan": (assets.key_plan_jpeg(1400), "image/jpeg"),
+        "key-plan": (assets.key_plan_jpeg(), "image/jpeg"),
         "logo": (assets.logo_png(260), "image/png"),
     }
     for unit_key in content.UNIT_TYPES:
@@ -701,25 +712,31 @@ def _document(locale: str, words) -> str:
     out.extend(f"<p>{_esc(b)}</p>" for b in s["location"]["body"])
     out.append("</div>")
 
-    # The key plan: the same drawing the PDF carries, with its distances
-    # repeated underneath as text. The artwork's own labels are English in
-    # every language -- it is a raster, not copy -- so the list below it is
-    # what actually translates, and what a screen reader reads out.
-    out.append('<div class="sheet" style="margin-top:40px">'
-               '<div class="sheet-inner">')
-    # The drawing titles itself -- "KEY PLAN", top right, inside the
-    # artwork -- so the sheet header says what the drawing is for instead
-    # of repeating its name back at the reader.
-    out.append(f'<div class="sheet-title"><b>{_esc(ui["key_plan_subtitle"])}'
-               f'</b><span>{_esc(ui["key_plan_note"])}</span></div>')
-    out.append('<div class="map">'
+    # The key plan runs edge to edge, the way the hero does. It is drawn
+    # 16:9 and bleeds to its own edges, so a frame around it would only
+    # add a border the artwork already decided not to have -- and the
+    # labels inside it are set relative to its width, which means every
+    # pixel of page width it gets is a pixel of legibility.
+    #
+    # The wrap closes for the drawing and reopens after it: a column that
+    # keeps prose at a readable measure is exactly the wrong box for a
+    # picture meant to span the viewport.
+    out.append(f'<div class="dim"><span>{_esc(ui["key_plan_subtitle"])}'
+               f'</span></div></div>')
+    out.append('<div class="key-plan-figure">'
                + _shot("key-plan", ui["alt_key_plan"]) + "</div>")
+    out.append('<div class="wrap">')
+
+    # The distances, repeated as text. The artwork's own labels are
+    # English in every language -- it is a raster, not copy -- so this
+    # list is what actually translates, and what a screen reader reads.
     out.append(f'<div class="dim"><span>{_esc(ui["nearby"])}</span></div>')
     out.append('<ul class="distances">')
     out.extend(f"<li><b>{_esc(place)}</b><span>{_esc(away)}</span></li>"
                for place, away in words.KEY_PLAN_ROWS)
     out.append("</ul>")
-    out.append("</div></div>")
+    out.append(f'<p class="legend"><span>{_esc(ui["key_plan_note"])}</span>'
+               f'</p>')
 
     rows = "".join(
         f'<tr><th scope="row">{_esc(k)}</th><td>{_esc(v)}</td></tr>'
@@ -753,6 +770,10 @@ def _document(locale: str, words) -> str:
     out.append(f'<div><h3>{_esc(ui["site"])}</h3><p><a class="with-ico" '
                f'href="{p["maps_url"]}" target="_blank" rel="noopener">'
                f'{_icon("pin", 18)}{_esc(words.ADDRESS)}</a></p></div>')
+    out.append(f'<div><h3>{_esc(ui["website"])}</h3><p>'
+               f'<a class="with-ico" href="{p["website_url"]}">'
+               f'{_icon("globe", 18)}{_esc(p["website_display"])}</a>'
+               f'</p></div>')
     out.append(f'<div><h3>{_esc(ui["developer"])}</h3>'
                f'<p>{_esc(words.CREDIT)}<br>{_esc(words.REGD_OFFICE)}</p></div>')
     out.append(
@@ -791,7 +812,9 @@ def _document(locale: str, words) -> str:
     # footer
     out.append('<footer><div class="wrap">')
     out.append(_shot("logo", ui["alt_logo"]))
-    out.append(f"<p>{_esc(words.CREDIT)}<br>{_esc(words.REGD_OFFICE)}</p>")
+    out.append(f"<p>{_esc(words.CREDIT)}<br>{_esc(words.REGD_OFFICE)}<br>"
+               f'<a href="{p["website_url"]}">{_esc(p["website_display"])}</a>'
+               "</p>")
     out.append("</div></footer>")
 
     # sticky bar
@@ -825,6 +848,10 @@ def render_html() -> str:
     out.append("<title>Lake Tree Avenue</title>")
     out.append('<meta name="description" content="'
                + _esc(default.META_DESCRIPTION) + '">')
+    # One canonical URL for a file that is also handed around offline: a
+    # copy opened from a phone's downloads still points back at the site.
+    out.append(f'<link rel="canonical" href="'
+               f'{content.PROJECT["website_url"]}">')
     out.append(f"<style>{CSS}\n{_image_css(imagery)}\n{_locale_css()}</style>")
     out.append("</head><body>")
     out.append(IG_GRADIENT)

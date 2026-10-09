@@ -221,23 +221,29 @@ def _place_image(page, blob, box, *, pad=0.0, frame=False):
 
 
 def _footer(page, words):
-    """Readable contact strip plus the four live links, on every page."""
+    """Readable contact strip plus the five live links, on every page."""
     p = content.PROJECT
     ui = words.UI
     _line(page, MARGIN, FOOTER_TOP, PAGE_SIZE[0] - MARGIN)
 
-    width = (PAGE_SIZE[0] - 2 * MARGIN) / 4.0
     cells = (
         (ui["call"].format(phone=p["phone_display"]), content.tel_link()),
         (ui["whatsapp"].format(phone=p["phone_display"]),
          content.wa_link(words.WHATSAPP_MESSAGE)),
         (p["email"], content.mail_link()),
+        (p["website_display"], p["website_url"]),
         (ui["directions_on_maps"], p["maps_url"]),
     )
+    width = (PAGE_SIZE[0] - 2 * MARGIN) / float(len(cells))
     for i, (label, uri) in enumerate(cells):
         rect = fitz.Rect(MARGIN + i * width, FOOTER_TOP + 8,
                          MARGIN + (i + 1) * width - 8, FOOTER_TOP + 30)
-        _text(page, rect, label, font=SANS, size=8.5, color=TERRA_DEEP)
+        # The strip is the one place every page repeats, so a cell that
+        # clipped would clip eleven times over.
+        if _text(page, rect, label, font=SANS, size=8.5,
+                 color=TERRA_DEEP) < 0:
+            raise LayoutOverflow(
+                f"footer cell {label!r} does not fit {rect.width:.0f} pt")
         page.insert_link({"kind": fitz.LINK_URI, "from": rect, "uri": uri})
 
 
@@ -533,22 +539,26 @@ def _location(doc, art):
 
 
 def _key_plan(doc, art):
-    """The landmark drawing, on a page of its own.
+    """The landmark drawing, bled across the full width of its own page.
 
-    It is four parts wide to three tall and this page is A4 landscape, so
-    the page height is what limits it and there is no column to spare
-    beside it. Nothing else goes on the sheet: the distances it pins are
-    set as text on the location page facing it, where they can be read at
-    a reading size rather than squinted at inside the artwork.
+    The artwork is 16:9 and draws to its own edges -- no border, no plate.
+    Framing it inside the margins would cost a quarter of its width, and
+    its labels are set relative to that width, so width is legibility.
+    So it runs from paper edge to paper edge and the margins apply only to
+    the caption under it.
+
+    Nothing else goes on the page: the distances it pins are set as text
+    on the location page facing it, at a reading size, rather than left to
+    be squinted at inside the artwork.
     """
     page = _page(doc)
     _fill(page, fitz.Rect(0, 0, PAGE_SIZE[0], PAGE_SIZE[1]), SAND)
-    _place_image(page, art["key_plan"],
-                 fitz.Rect(MARGIN, MARGIN, PAGE_SIZE[0] - MARGIN,
-                           FOOTER_TOP - 24),
-                 pad=8, frame=True)
-    _text(page, fitz.Rect(MARGIN, FOOTER_TOP - 22, PAGE_SIZE[0] - MARGIN,
-                          FOOTER_TOP - 4), art["words"].UI["key_plan_note"],
+    img = Image.open(io.BytesIO(art["key_plan"]))
+    height = PAGE_SIZE[0] * img.height / img.width
+    page.insert_image(fitz.Rect(0, 0, PAGE_SIZE[0], height),
+                      stream=art["key_plan"])
+    _text(page, fitz.Rect(MARGIN, height + 16, PAGE_SIZE[0] - MARGIN,
+                          height + 40), art["words"].UI["key_plan_note"],
           font=SANS, size=8.5, color=INK_SOFT, align=1)
     _footer(page, art["words"])
     return page
@@ -596,6 +606,18 @@ def _contact(doc, art):
         _text(page, rect, label, font=SERIF, size=10.5, color=TERRA_DEEP)
         page.insert_link({"kind": fitz.LINK_URI, "from": rect, "uri": uri})
 
+    # The website sits beside Follow rather than under the phone number:
+    # it is somewhere to go, not a way to reach anybody.
+    wx = MARGIN + (PAGE_SIZE[0] - 2 * MARGIN) / 3
+    _line(page, wx, fy, wx + col_w)
+    _text(page, fitz.Rect(wx, fy + 7, wx + col_w, fy + 24),
+          words.UI["website"], font=SANS_BOLD, size=8.5, color=INK_SOFT)
+    web = fitz.Rect(wx, fy + 24, wx + col_w, fy + 45)
+    _text(page, web, p["website_display"], font=SERIF, size=10.5,
+          color=TERRA_DEEP)
+    page.insert_link({"kind": fitz.LINK_URI, "from": web,
+                      "uri": p["website_url"]})
+
     _place_image(page, art["logo"],
                  fitz.Rect(MARGIN, FOOTER_TOP - 96, MARGIN + 116,
                            FOOTER_TOP - 18))
@@ -609,7 +631,7 @@ def build_doc(locale: str = copy.DEFAULT) -> fitz.Document:
         "logo": assets.logo_png(420),
         "render": assets.render_jpeg(1800),
         "site": assets.site_plan_jpeg(1500),
-        "key_plan": assets.key_plan_jpeg(1400),
+        "key_plan": assets.key_plan_jpeg(),
         "sections": {s["id"]: s for s in words.SECTIONS},
         "words": words,
         "locale": locale,

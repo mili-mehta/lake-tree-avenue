@@ -3,8 +3,11 @@ import re
 import tempfile
 import unittest
 
+import io
+
 import fitz
-from build import build_pdf, content, copy, fonts
+from PIL import Image
+from build import assets, build_pdf, content, copy, fonts
 
 EN = copy.for_locale("en")
 
@@ -58,7 +61,7 @@ class TestPdf(unittest.TestCase):
         return [l.get("uri", "") for l in page.get_links()
                 if l["kind"] == fitz.LINK_URI]
 
-    def test_every_page_carries_the_four_footer_ctas(self):
+    def test_every_page_carries_the_five_footer_ctas(self):
         for i, page in enumerate(self.doc):
             uris = self._uris(page)
             self.assertIn(content.tel_link(), uris, f"page {i+1} missing tel")
@@ -66,6 +69,8 @@ class TestPdf(unittest.TestCase):
             self.assertIn(content.PROJECT["maps_url"], uris, f"page {i+1} missing maps")
             self.assertTrue(any(u.startswith("https://wa.me/") for u in uris),
                             f"page {i+1} missing whatsapp")
+            self.assertIn(content.PROJECT["website_url"], uris,
+                          f"page {i+1} missing website")
 
     def test_all_link_rects_lie_inside_their_page(self):
         for i, page in enumerate(self.doc):
@@ -80,12 +85,13 @@ class TestPdf(unittest.TestCase):
                              f"page {i+1} still carries per-plot links")
 
     def test_layout_page_carries_only_the_footer_links(self):
-        self.assertEqual(len(self.doc[LAYOUT_PAGE].get_links()), 4)
+        self.assertEqual(len(self.doc[LAYOUT_PAGE].get_links()), 5)
 
     def test_contact_details_are_readable_text_not_only_links(self):
         text = "\n".join(p.get_text() for p in self.doc)
         self.assertIn(content.PROJECT["phone_display"], text)
         self.assertIn(content.PROJECT["email"], text)
+        self.assertIn(content.PROJECT["website_display"], text)
 
     def test_contact_page_links_each_social_profile_by_handle(self):
         page = self.doc[-1]  # contact closes the brochure
@@ -463,12 +469,30 @@ class TestKeyPlan(unittest.TestCase):
         page = self.doc[KEY_PLAN_PAGE]
         self.assertEqual(len(page.get_images()), 1)
 
-    def test_the_drawing_fills_the_page_it_was_given(self):
+    def test_the_drawing_bleeds_to_both_paper_edges(self):
+        # The artwork is 16:9 and draws to its own edges. Inset into the
+        # margins it would lose a quarter of its width, and its labels are
+        # sized relative to that width, so the inset would cost legibility
+        # rather than buy composure.
         page = self.doc[KEY_PLAN_PAGE]
         rect = page.get_image_rects(page.get_images()[0][0])[0]
-        self.assertGreater(rect.height, 420,
-                           "the key plan sets too small to read its pins")
-        self.assertGreater(rect.width, 560)
+        self.assertAlmostEqual(rect.x0, 0, places=1)
+        self.assertAlmostEqual(rect.x1, page.rect.width, places=1)
+        self.assertAlmostEqual(rect.y0, 0, places=1)
+
+    def test_the_drawing_keeps_its_own_proportions(self):
+        # Stretched to fit, the pins would sit off the road they mark.
+        page = self.doc[KEY_PLAN_PAGE]
+        rect = page.get_image_rects(page.get_images()[0][0])[0]
+        with Image.open(io.BytesIO(assets.key_plan_jpeg())) as art:
+            self.assertAlmostEqual(rect.width / rect.height,
+                                   art.width / art.height, places=2)
+
+    def test_the_drawing_clears_the_footer(self):
+        page = self.doc[KEY_PLAN_PAGE]
+        rect = page.get_image_rects(page.get_images()[0][0])[0]
+        self.assertLess(rect.y1, build_pdf.FOOTER_TOP - 40,
+                        "the drawing runs into its own caption")
 
     def test_the_drawing_page_carries_nothing_but_its_caption(self):
         # The distances belong on the location page, at a reading size.
@@ -485,21 +509,29 @@ class TestKeyPlan(unittest.TestCase):
             self.assertIn(away, text, f"{place} has no distance")
 
     def test_every_language_sets_every_distance(self):
-        # Asserted on the place name and the figure, which are Latin in all
-        # three documents. The unit beside them is "km", "किमी" or "કિમી",
-        # and MuPDF's extractor breaks an Indic conjunct back into the
-        # codepoints it was composed from, so the extracted string is not
-        # the source string. That the glyphs exist at all is
-        # test_every_indic_character_has_a_glyph's job, not this one's.
+        # Asserted on the figures, which are Latin digits in all three
+        # documents, and on their order, which is the order of the rows.
+        # The place names are now Hindi and Gujarati, and MuPDF's extractor
+        # hands a shaped Indic cluster back as whatever codepoints its
+        # glyphs were mapped from, so the extracted name is not the source
+        # name and matching on it would test the extractor. That the names
+        # reach the page with glyphs to draw them is
+        # test_every_indic_character_has_a_glyph's job; that each one sits
+        # beside its own figure is checked in English, where extraction is
+        # faithful, by the test above.
         for locale in copy.LOCALES:
             words = copy.for_locale(locale)
             doc = build_pdf.build_doc(locale)
             text = _unligate(" ".join(doc[LOCATION_PAGE].get_text().split()))
-            for place, away in words.KEY_PLAN_ROWS:
-                figure = away.split()[0]
-                self.assertIn(place, text, f"{locale}: {place} is missing")
-                self.assertIn(f"{place} {figure}", text,
-                              f"{locale}: {place} is not beside {figure}")
+            figures = [away.split()[0] for _, away in words.KEY_PLAN_ROWS]
+            for figure in figures:
+                self.assertIn(figure, text, f"{locale}: {figure} is missing")
+            found = [m.group() for m in
+                     re.finditer("|".join(re.escape(f) for f in
+                                          sorted(figures, key=len,
+                                                 reverse=True)), text)]
+            self.assertEqual(found, figures,
+                             f"{locale}: the distances are out of order")
             doc.close()
 
 

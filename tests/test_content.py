@@ -30,6 +30,12 @@ class TestFacts(unittest.TestCase):
     def test_mail_link(self):
         self.assertEqual(content.mail_link(), "mailto:laketreeavenue@gmail.com")
 
+    def test_website_is_printed_bare_and_linked_with_a_scheme(self):
+        self.assertEqual(content.PROJECT["website_display"],
+                         "laketreeavenue.com")
+        self.assertEqual(content.PROJECT["website_url"],
+                         "https://laketreeavenue.com")
+
     def test_social_handle_is_the_same_on_both_networks(self):
         # One handle covers Instagram and Facebook, so a caption or a print
         # footer can name it once.

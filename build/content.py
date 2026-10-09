@@ -23,6 +23,11 @@ PROJECT = {
     "phone_e164": "+918758756666",
     "phone_display": "+91 87587 56666",
     "email": "laketreeavenue@gmail.com",
+    # The project's own domain. Printed bare, because that is what a
+    # buyer types and what fits a footer cell; the link beside it
+    # carries the scheme a browser and a PDF viewer both need.
+    "website_display": "laketreeavenue.com",
+    "website_url": "https://laketreeavenue.com",
     # One handle on both networks, so a caption, a footer or a hoarding can
     # print it once and be right for either.
     "social_handle": "@laketreeavenue",

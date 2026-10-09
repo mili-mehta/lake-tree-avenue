@@ -147,12 +147,21 @@ class TestKeyPlan(unittest.TestCase):
     """The landmark drawing: finished artwork, placed whole."""
 
     def setUp(self):
-        self.blob = assets.key_plan_jpeg(width=1400)
+        self.blob = assets.key_plan_jpeg()
         self.img = _open(self.blob)
 
-    def test_key_plan_is_jpeg_at_requested_width(self):
+    def test_key_plan_is_jpeg_at_the_source_width(self):
+        # Both artefacts bleed it across their full width, so there is no
+        # detail to gain by upscaling and none to spare by shrinking.
+        with Image.open(assets.KEY_PLAN_SRC) as src:
+            width = src.width
         self.assertEqual(self.img.format, "JPEG")
-        self.assertEqual(self.img.width, 1400)
+        self.assertEqual(self.img.width, width)
+
+    def test_key_plan_is_drawn_landscape(self):
+        # A squarer sheet is height-capped on a landscape page and leaves
+        # a quarter of the width empty; 16:9 is what fills it.
+        self.assertGreater(self.img.width / self.img.height, 1.7)
 
     def test_key_plan_keeps_the_source_aspect(self):
         with Image.open(assets.KEY_PLAN_SRC) as src:
@@ -160,9 +169,10 @@ class TestKeyPlan(unittest.TestCase):
         self.assertAlmostEqual(self.img.height / self.img.width, want,
                                places=2)
 
-    def test_key_plan_keeps_its_own_border(self):
-        # The cream surround is the composition, not blank paper around it.
-        # Trimming to ink would crop into the artwork.
+    def test_key_plan_is_never_trimmed(self):
+        # The artwork bleeds to its own edges: sky at the top, planting at
+        # the sides. There is no blank surround to trim, and a trim would
+        # crop into the picture.
         trimmed = assets._trim_white(self.img.convert("RGB"))
         self.assertEqual(trimmed.size, self.img.size)
 

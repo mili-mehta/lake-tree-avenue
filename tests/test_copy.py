@@ -14,13 +14,8 @@ LATIN_OK = (
     "Construction", "LAYOUT PLAN", "Waghodia", "Vadodara", "Kamlapura",
     "Alkapuri", "Halol", "Ramkrishna Chambers", "BPC Road", "Regd",
     "Office", "laketreeavenue@gmail.com", "@laketreeavenue",
+    "laketreeavenue.com",
     "AC", "PDF", "Tremix",
-    # The landmarks the key plan pins. A Vadodara buyer reads every one of
-    # these in Latin, whichever language the line around it is in, so the
-    # names stay put and only the unit beside them is translated.
-    "Parul University", "Sumandeep Vidyapeeth", "Dhiraj Hospital",
-    "Avalon World School", "Waghodia GIDC", "L&T Knowledge City",
-    "Nimeta Garden", "AATAPI Wonderland", "Vadodara Airport",
 )
 
 DEVANAGARI = r"ऀ-ॿ"

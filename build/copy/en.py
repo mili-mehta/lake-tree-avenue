@@ -108,9 +108,8 @@ LOCATION_ROWS = (
 # engine and to anyone who copies a line to send on. So they are set as
 # text beside the drawing rather than left in its pixels.
 #
-# Latin names, in every language, for the same reason LOCATION_ROWS keeps
-# "Parul University" Latin: that is how a Vadodara buyer reads them. Only
-# the unit moves.
+# The Hindi and Gujarati sheets carry these names in their own script, so
+# a reader of those pages never meets half a line of Latin.
 KEY_PLAN_ROWS = (
     ("Parul University", "2.3 km"),
     ("Sumandeep Vidyapeeth", "2.3 km"),
@@ -205,6 +204,7 @@ UI = {
     "site": "Site",
     "developer": "Developer",
     "follow": "Follow",
+    "website": "Website",
     "layout_plan": "LAYOUT PLAN",
     "sheet_subtitle": "Lake Tree Avenue, Waghodia Main Road, Vadodara",
     "ask_which_plots": "Ask us which plots are still open",

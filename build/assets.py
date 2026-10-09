@@ -15,7 +15,8 @@ LOGO_SRC = os.path.join(ROOT, "images", "Lake Tree Avenue new-Logo.png")
 RENDER_SRC = os.path.join(ROOT, "images", "lake-tree-avenue.PNG")
 LAYOUT_SRC = os.path.join(ROOT, "REV.LAYOUT - 07-10-2026.pdf")
 SITE_PLAN_SRC = os.path.join(ROOT, "images", "site-plan.png")
-KEY_PLAN_SRC = os.path.join(ROOT, "images", "Lake Tree Avenue Key Plan.png")
+KEY_PLAN_SRC = os.path.join(ROOT, "images",
+                            "Lake Tree Avenue Key Plan-landscape.png")
 
 # The floor plans as issued: one sheet per floor per unit type, each
 # showing an adjacent pair of townhouses. Ground floor first, the order a
@@ -127,13 +128,16 @@ def site_plan_jpeg(width: int = 1500, quality: int = 82) -> bytes:
     return _encode(img, "JPEG", quality=quality, optimize=True, progressive=True)
 
 
-def key_plan_jpeg(width: int = 1400, quality: int = 85) -> bytes:
+def key_plan_jpeg(width: int = 1672, quality: int = 85) -> bytes:
     """The landmark key plan: what stands either side of the gate, and how far.
 
     Unlike the site plan this is finished artwork rather than a drawing --
     it carries its own logo, its own "NOT TO SCALE" note and a photographic
-    sky behind the pins, so it is placed whole and never trimmed. The cream
-    border is part of the composition; cropping to ink would eat it.
+    sky behind the pins, so it is placed whole and never trimmed. It is
+    drawn 16:9 and bleeds to its own edges, which is why both artefacts run
+    it edge to edge: its labels are sized relative to its width, so page
+    width is legibility. The default is the source's own width -- there is
+    no detail to gain by upscaling and none to spare by shrinking.
 
     Its labels are English in all three documents. Repainting a raster of
     someone else's artwork per language is not something a build should do,
