@@ -8,7 +8,7 @@ SVG anchors that work with no JavaScript at all.
 import html
 import os
 
-from build import assets, content, plots
+from build import assets, content
 
 CSS = """
 :root {
@@ -163,18 +163,11 @@ section { padding: 84px 0; }
 }
 .map { position: relative; }
 .map img { width: 100%; }
-.map svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.plot {
-  fill: #b5793f; fill-opacity: 0; stroke: #b5793f; stroke-width: 0;
-  transition: fill-opacity .14s ease;
-}
-.map a:hover .plot, .map a:focus .plot { fill-opacity: 0.3; stroke-width: 2; }
 .legend {
   font-family: var(--sans); font-size: 0.84rem; color: var(--ink-soft);
   margin-top: 14px; display: flex; gap: 22px; flex-wrap: wrap;
 }
-.swatch { display: inline-block; width: 11px; height: 11px; margin-right: 7px;
-  background: #e9dcc7; border: 1px solid var(--terra); vertical-align: -1px; }
+.inline-cta { font-family: var(--sans); font-size: 0.88rem; }
 
 /* ---------- specifications ---------- */
 .spec-list { margin: 0; }
@@ -271,38 +264,12 @@ def _plan_pane(key: str, crop_uri: str) -> str:
     )
 
 
-def _plot_overlay() -> str:
-    spots = plots.hotspots(plots.SITE_BOX)
-    x0, y0, x1, y1 = plots.SITE_BOX
-    view_w = 1000.0
-    view_h = round(view_w * ((y1 - y0) * 2384.0) / ((x1 - x0) * 1684.0))
-    parts = []
-    for s in spots:
-        x = round(s.x * view_w, 2)
-        y = round(s.y * view_h, 2)
-        w = round(s.w * view_w, 2)
-        h = round(s.h * view_h, 2)
-        label = f"Plot {s.number:02d}, {content.UNIT_TYPES[s.unit_type]['label']}"
-        parts.append(
-            f'<a href="{content.plot_wa_link(s.number)}" target="_blank" '
-            f'rel="noopener"><title>{_esc(label)} — enquire on WhatsApp</title>'
-            f'<rect class="plot" x="{x}" y="{y}" width="{w}" height="{h}"></rect>'
-            f"</a>"
-        )
-    return (
-        f'<svg viewBox="0 0 {view_w:.0f} {view_h:.0f}" preserveAspectRatio="none" '
-        f'role="group" aria-label="Plot map. Each plot opens a WhatsApp enquiry.">'
-        + "".join(parts)
-        + "</svg>"
-    )
-
-
 def render_html() -> str:
     p = content.PROJECT
     logo = assets.data_uri(assets.logo_png(420), "image/png")
     logo_small = assets.data_uri(assets.logo_png(260), "image/png")
     render = assets.data_uri(assets.render_jpeg(1600), "image/jpeg")
-    layout = assets.data_uri(assets.layout_png(1500, plots.SITE_BOX), "image/png")
+    layout = assets.data_uri(assets.layout_png(1500, assets.SITE_BOX), "image/png")
     crops = assets.plan_crops()
     crop_a = assets.data_uri(crops["A"], "image/jpeg")
     crop_b = assets.data_uri(crops["B"], "image/jpeg")
@@ -391,11 +358,9 @@ def render_html() -> str:
     out.append(f'<div class="map"><img src="{layout}" '
                'alt="Site plan showing 48 numbered plots, the internal roads, '
                'the common plot and the entry gate">')
-    out.append(_plot_overlay())
     out.append("</div>")
-    out.append('<p class="legend"><span><span class="swatch"></span>'
-               "Tap a plot to enquire about that number</span>"
-               f"<span>{_esc(s['layout']['body'][0])}</span></p>")
+    out.append(f'<p class="legend"><span>{_esc(s["layout"]["body"][0])}</span>'
+               "<span>Ask us which plots are still open</span></p>")
     out.append("</div></div>")
     out.append("</div></section>")
 
@@ -421,11 +386,15 @@ def render_html() -> str:
     out.append(f'<p class="lead">{_esc(s["location"]["lead"])}</p></div>')
     out.append('<div class="measure">')
     out.extend(f"<p>{_esc(b)}</p>" for b in s["location"]["body"])
-    out.append(f"<p>{_esc(p['site_address'])}</p>")
-    out.append('<div class="actions">')
+    out.append("</div>")
+    rows = "".join(
+        f'<tr><th scope="row">{_esc(k)}</th><td>{_esc(v)}</td></tr>'
+        for k, v in content.LOCATION_ROWS)
+    out.append(f'<table class="schedule">{rows}</table>')
+    out.append('<div class="actions" style="margin-top:30px">')
     out.append(f'<a class="btn" href="{p["maps_url"]}" target="_blank" '
-               'rel="noopener">Open in Google Maps</a>')
-    out.append("</div></div>")
+               f'rel="noopener">{_esc(p["site_address"])}</a>')
+    out.append("</div>")
     out.append("</div></section>")
 
     # contact
@@ -437,10 +406,14 @@ def render_html() -> str:
     out.extend(f"<p>{_esc(b)}</p>" for b in s["contact"]["body"])
     out.append("</div>")
     out.append('<div class="contact-grid">')
-    out.append(f'<div><h3>Call or message</h3><p>'
-               f'<a href="{content.tel_link()}">{_esc(p["phone_display"])}</a><br>'
-               f'<a href="{content.mail_link()}">{_esc(p["email"])}</a></p></div>')
-    out.append(f'<div><h3>Site</h3><p>{_esc(p["site_address"])}</p></div>')
+    out.append(
+        f'<div><h3>Call or message</h3><p>'
+        f'<a href="{content.tel_link()}">{_esc(p["phone_display"])}</a> '
+        f'<a class="inline-cta" data-cta="whatsapp" href="{wa}" '
+        f'target="_blank" rel="noopener">on WhatsApp</a><br>'
+        f'<a href="{content.mail_link()}">{_esc(p["email"])}</a></p></div>')
+    out.append(f'<div><h3>Site</h3><p><a href="{p["maps_url"]}" target="_blank" '
+               f'rel="noopener">{_esc(p["site_address"])}</a></p></div>')
     out.append(f'<div><h3>{_esc(p["developer"])}</h3>'
                f'<p>{_esc(p["partners"])}<br>{_esc(p["regd_office"])}</p></div>')
     out.append("</div>")

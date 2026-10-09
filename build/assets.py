@@ -17,6 +17,12 @@ LAYOUT_SRC = os.path.join(ROOT, "REV.LAYOUT - 07-10-2026.pdf")
 
 _WHITE = 247  # a channel value above this counts as blank paper
 
+# The drawing sheet carries the site plan in its upper two thirds and a strip
+# of floor plans and elevations below. The brochure shows those drawings in
+# their own section, so the plot map crops to the site plan alone — fractions
+# of the rendered page.
+SITE_BOX = (0.020, 0.055, 0.980, 0.775)
+
 # Generous catch boxes over the rendered layout page's bottom strip, which
 # carries two floor-plan sets and the elevation pair. Each box only has to
 # contain its drawing and none of its neighbour's; the exact frame comes from

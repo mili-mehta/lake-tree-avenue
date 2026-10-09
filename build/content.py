@@ -2,6 +2,7 @@
 
 No I/O, no formatting decisions — renderers consume these values.
 """
+import re
 from urllib.parse import quote
 
 PROJECT = {
@@ -16,7 +17,8 @@ PROJECT = {
                      "next to Spunpipe & Construction Co., Kamlapura, Vadodara"),
     "regd_office": "1-B Ramkrishna Chambers, BPC Road, Alkapuri, Vadodara 390007",
     "maps_url": "https://www.google.com/maps/search/?api=1&query="
-                + quote("Spunpipe & Construction Co, Waghodia Road, Vadodara"),
+                + quote("Spunpipe & Construction Co, Waghodia Road, "
+                        "Kamlapura, Vadodara"),
     "unit_count": "48",
     "unit_type": "2 BHK townhouses",
 }
@@ -26,6 +28,19 @@ FORBIDDEN = (
     "The Palace", "F.P. No. 42", "3 BHK", "A-TYPE 3",
     "Pioneer Homoeopathic", "22.71",
 )
+
+
+def forbidden_hits(text: str) -> list[str]:
+    """Superseded terms present in `text`, ignoring how it is broken up.
+
+    A phrase that wraps across a line, a table cell or two paragraphs still
+    reads as that phrase to a buyer, so whitespace and tags are collapsed
+    before matching. Matching the raw string would miss "The\nPalace".
+    """
+    flat = re.sub(r"<[^>]+>", " ", text)
+    flat = re.sub(r"\s+", " ", flat).lower()
+    return [term for term in FORBIDDEN
+            if re.sub(r"\s+", " ", term).lower() in flat]
 
 
 def tel_link() -> str:
@@ -42,31 +57,37 @@ def wa_link(message: str) -> str:
     return f"https://wa.me/{digits}?text=" + quote(message, safe="")
 
 
-def plot_wa_link(plot: int) -> str:
-    return wa_link(f"Hi, I'm interested in Plot {plot:02d} at Lake Tree Avenue.")
-
-
 UNIT_TYPES = {
     "A": {
         "label": "Type A",
-        "plots": "Plots 01–06",
+        "plots": "Plots 01\u201306",
         "rooms": (
-            ("Kitchen", "9'-9½\" × 9'-1½\""),
-            ("Master bedroom", "10'-9½\" × 12'-6\""),
-            ("Standing balcony", "2'-0\" wide"),
-            ("Store", "Provided"),
+            ("Plot size", "17'-5\" \u00d7 40'-4\u00bd\"  [5.31 m \u00d7 12.30 m]"),
+            ("Living room / dining", "16'-8\" \u00d7 15'-0\""),
+            ("Kitchen", "9'-9\u00bd\" \u00d7 9'-1\u00bd\""),
+            ("Master bedroom", "10'-9\u00bd\" \u00d7 12'-6\""),
+            ("Second bedroom", "10'-9\u00bd\" \u00d7 11'-7\u00bd\""),
+            ("Attached toilet", "5'-6\" \u00d7 5'-0\""),
+            ("Second attached toilet", "4'-0\" \u00d7 7'-0\""),
+            ("Ground floor toilet", "4'-6\" \u00d7 5'-0\""),
+            ("Standing balcony", "2'-0\" wide, two"),
+            ("Also", "Store, wash area, otta, private terrace"),
         ),
     },
     "B": {
         "label": "Type B",
-        "plots": "Plots 07–48",
+        "plots": "Plots 07\u201348",
         "rooms": (
-            ("Kitchen", "10'-6\" × 8'-1½\""),
-            ("Master bedroom", "11'-0\" × 12'-6\""),
-            ("Second bedroom", "10'-1½\" × 10'-7½\""),
-            ("Attached toilet", "6'-0\" × 5'-0\""),
-            ("Standing balcony", "2'-0\" wide"),
-            ("Plot size", "25'-3\" × 39'-1\"  [7.70 m × 11.91 m]"),
+            ("Plot size", "18'-1\u00bd\" \u00d7 39'-1\"  [5.52 m \u00d7 11.91 m]"),
+            ("Living room / dining", "17'-4\u00bd\" \u00d7 15'-0\""),
+            ("Kitchen", "10'-6\" \u00d7 8'-1\u00bd\""),
+            ("Master bedroom", "11'-0\" \u00d7 12'-6\""),
+            ("Second bedroom", "10'-1\u00bd\" \u00d7 10'-7\u00bd\""),
+            ("Attached toilet", "6'-0\" \u00d7 5'-0\""),
+            ("Second attached toilet", "4'-0\" \u00d7 7'-0\""),
+            ("Ground floor toilet", "4'-6\" \u00d7 5'-0\""),
+            ("Standing balcony", "2'-0\" wide, two"),
+            ("Also", "Store, wash area, otta, private terrace"),
         ),
     },
 }
@@ -103,6 +124,14 @@ AMENITIES = (
     "Landscape garden with community hall",
 )
 
+LOCATION_ROWS = (
+    ("Road", "Main Waghodia Road frontage"),
+    ("Between", "Parul University and Sumandeep College"),
+    ("Next to", "Spunpipe & Construction Co."),
+    ("Area", "Kamlapura, Vadodara"),
+    ("Corridor", "Vadodara east, toward Halol"),
+)
+
 SECTIONS = (
     {
         "id": "cover",
@@ -135,16 +164,17 @@ SECTIONS = (
     {
         "id": "plans",
         "title": "Floor plans",
-        "lead": "Ground, first and terrace levels.",
-        "body": ("Every home has living and dining with the kitchen at ground "
-                 "level, bedrooms above, and the full terrace at the top.",),
+        "lead": "Ground and first floor, drawn to scale.",
+        "body": ("Living and dining with the kitchen at ground level, both "
+                 "bedrooms above, and the full terrace over them.",),
     },
     {
         "id": "layout",
-        "title": "Choose your plot",
-        "lead": "Tap any plot to enquire about that number.",
-        "body": ("Forty-eight plots, a common plot and a landscaped garden, all "
-                 "inside one gated boundary.",),
+        "title": "The site plan",
+        "lead": "Forty-eight plots, a common plot and a landscaped garden, "
+                "all inside one gated boundary.",
+        "body": ("Six homes stand in the entrance row; the other forty-two "
+                 "line the avenue behind them.",),
     },
     {
         "id": "specs",
@@ -154,10 +184,14 @@ SECTIONS = (
     },
     {
         "id": "location",
-        "title": "Waghodia Main Road",
-        "lead": "On Vadodara's eastern growth corridor, toward Halol.",
-        "body": ("The gate opens onto the main Waghodia road, so there is no "
-                 "approach lane to negotiate and no last-mile detour.",),
+        "title": "Between Parul and Sumandeep",
+        "lead": "On the main Waghodia Road, in the stretch between Parul "
+                "University and Sumandeep College.",
+        "body": ("The gate opens onto the main road, so there is no approach "
+                 "lane to negotiate and no last-mile detour.",
+                 "Two of Vadodara's largest campuses sit either side of you, "
+                 "which is what keeps this stretch of road serviced, lit and "
+                 "in demand with tenants.",),
     },
     {
         "id": "contact",

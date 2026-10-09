@@ -14,7 +14,16 @@ import os
 import fitz
 from PIL import Image
 
-from build import assets, content, plots
+from build import assets, content
+
+class LayoutOverflow(RuntimeError):
+    """Copy did not fit its box.
+
+    insert_textbox writes only what fits and returns a negative value. Left
+    unchecked that drops the tail of a sentence from the brochure silently,
+    so the build fails loudly instead.
+    """
+
 
 PAGE_SIZE = (842.0, 595.0)
 
@@ -130,15 +139,25 @@ def _heading(page, title, lead, *, y=MARGIN, width=430.0):
     return y + (78 if lead else 52)
 
 
-def _schedule(page, rows, x, y, width, *, label_w=150.0, size=9.5):
-    """Hairline-ruled fact table, the drawing sheet's own way of listing."""
+def _schedule(page, rows, x, y, width, *, label_w=150.0, size=9.5, pitch=26.0):
+    """Hairline-ruled fact table, the drawing sheet's own way of listing.
+
+    Raises if the table would run into the footer: a schedule that silently
+    outgrows its page drops its last rows, and on the plans page that is the
+    plot size.
+    """
+    end = y + pitch * len(rows)
+    if end > FOOTER_TOP - 6:
+        raise LayoutOverflow(
+            f"schedule of {len(rows)} rows ends at {end:.0f} pt, past the "
+            f"footer at {FOOTER_TOP:.0f} pt")
     for key, value in rows:
         _line(page, x, y, x + width)
-        _text(page, fitz.Rect(x, y + 6, x + label_w, y + 30), key,
+        _text(page, fitz.Rect(x, y + 5, x + label_w, y + 5 + pitch), key,
               font=SANS, size=size, color=INK_SOFT)
-        _text(page, fitz.Rect(x + label_w, y + 6, x + width, y + 34), value,
-              font=SERIF, size=size + 0.5, color=INK)
-        y += 26
+        _text(page, fitz.Rect(x + label_w, y + 5, x + width, y + 9 + pitch),
+              value, font=SERIF, size=size + 0.5, color=INK)
+        y += pitch
     _line(page, x, y, x + width)
     return y
 
@@ -218,10 +237,10 @@ def _plans(doc, art):
               f"{unit['label']}, {unit['plots'].lower()}",
               font=SANS_BOLD, size=9.5, color=TERRA_DEEP)
         placed = _place_image(page, art["crop_" + key],
-                              fitz.Rect(x, y + 20, x + half, y + 210),
-                              pad=10, frame=True)
-        _schedule(page, unit["rooms"], x, placed.y1 + 26, half,
-                  label_w=118.0, size=9)
+                              fitz.Rect(x, y + 18, x + half, y + 162),
+                              pad=9, frame=True)
+        _schedule(page, unit["rooms"], x, placed.y1 + 22, half,
+                  label_w=124.0, size=8.5, pitch=20.0)
     _footer(page)
     return page
 
@@ -239,16 +258,6 @@ def _layout(doc, art):
     page.draw_rect(img_rect + (-8, -8, 8, 8), color=RULE, width=0.7)
     page.insert_image(img_rect, stream=art["site"])
 
-    for spot in plots.hotspots(plots.SITE_BOX):
-        rect = fitz.Rect(
-            img_rect.x0 + spot.x * img_rect.width,
-            img_rect.y0 + spot.y * img_rect.height,
-            img_rect.x0 + (spot.x + spot.w) * img_rect.width,
-            img_rect.y0 + (spot.y + spot.h) * img_rect.height,
-        )
-        page.insert_link({"kind": fitz.LINK_URI, "from": rect & page.rect,
-                          "uri": content.plot_wa_link(spot.number)})
-
     tx = img_rect.x1 + 34
     tw = PAGE_SIZE[0] - MARGIN - tx
     _text(page, fitz.Rect(tx, MARGIN, tx + tw, MARGIN + 60), s["title"],
@@ -257,8 +266,9 @@ def _layout(doc, art):
           s["lead"] + "\n\n" + s["body"][0], font=SERIF, size=10.5,
           color=INK_SOFT, leading=1.4)
     _line(page, tx, MARGIN + 180, tx + tw)
-    _text(page, fitz.Rect(tx, MARGIN + 188, tx + tw, MARGIN + 260),
-          "Type A\nPlots 01-06\n\nType B\nPlots 07-48",
+    _text(page, fitz.Rect(tx, MARGIN + 188, tx + tw, MARGIN + 290),
+          "Type A\nPlots 01-06\n\nType B\nPlots 07-48\n\n"
+          "Ask us which plots are still open.",
           font=SANS, size=9, color=INK_SOFT, leading=1.5)
     _footer(page)
     return page
@@ -280,11 +290,15 @@ def _specs(doc, art):
                   font=SANS_BOLD, size=8.5, color=TERRA_DEEP)
             body_box = fitz.Rect(x, cy + 18, x + col_w, cy + 18 + 56)
             # insert_textbox returns the unused height, so this is the exact
-            # space the wrapped text took.
+            # space the wrapped text took. A negative value means it did not
+            # fit and part of the sentence was dropped.
             remaining = _text(page, body_box, text, font=SERIF, size=9.5,
                               color=INK, leading=1.3)
-            used = 56 - max(0.0, remaining)
-            cy += 18 + used + 10
+            if remaining < 0:
+                raise LayoutOverflow(
+                    f"specification {label!r} does not fit its box "
+                    f"(short by {abs(remaining):.1f} pt)")
+            cy += 18 + (56 - remaining) + 10
     _fill(page, fitz.Rect(0, 432, PAGE_SIZE[0], FOOTER_TOP - 10), SAND)
     _text(page, fitz.Rect(MARGIN, 444, MARGIN + 300, 466), "Across the campus",
           font=SANS_BOLD, size=9, color=INK_SOFT)
@@ -305,15 +319,11 @@ def _location(doc, art):
     s = art["sections"]["location"]
     p = content.PROJECT
     y = _heading(page, s["title"], s["lead"], y=132.0)
-    _text(page, fitz.Rect(MARGIN, y, MARGIN + 340, y + 120),
-          s["body"][0] + "\n\n" + p["site_address"], font=SERIF, size=11,
-          color=INK, leading=1.45)
-    _schedule(page, (
-        ("Approach", "Main Waghodia road frontage"),
-        ("Landmark", "Next to Spunpipe & Construction Co."),
-        ("Area", "Kamlapura, Vadodara"),
-        ("Corridor", "Vadodara east, toward Halol"),
-    ), 440.0, y, PAGE_SIZE[0] - MARGIN - 440.0, label_w=96.0)
+    _text(page, fitz.Rect(MARGIN, y, MARGIN + 340, y + 150),
+          "\n\n".join(s["body"]) + "\n\n" + p["site_address"],
+          font=SERIF, size=11, color=INK, leading=1.45)
+    _schedule(page, content.LOCATION_ROWS, 440.0, y,
+              PAGE_SIZE[0] - MARGIN - 440.0, label_w=96.0)
     rect = fitz.Rect(MARGIN, y + 150, MARGIN + 190, y + 178)
     page.draw_rect(rect, color=TERRA, width=1.2)
     _text(page, rect + (12, 8, 0, 0), "Open in Google Maps", font=SANS_BOLD,
@@ -359,7 +369,7 @@ def build_doc() -> fitz.Document:
     art = {
         "logo": assets.logo_png(420),
         "render": assets.render_jpeg(1800),
-        "site": assets.layout_png(1500, plots.SITE_BOX),
+        "site": assets.layout_png(1500, assets.SITE_BOX),
         "crop_A": crops["A"],
         "crop_B": crops["B"],
         "elevation": crops["elevation"],

@@ -1,17 +1,5 @@
 import os
-import tempfile
 import unittest
-
-from build import qa
-
-
-class TestQaOverlay(unittest.TestCase):
-    def test_overlay_is_written_and_non_trivial(self):
-        with tempfile.TemporaryDirectory() as d:
-            path = qa.hotspot_overlay(os.path.join(d, "qa.png"))
-            self.assertTrue(os.path.exists(path))
-            self.assertGreater(os.path.getsize(path), 100_000)
-
 
 class TestArtefactsOnDisk(unittest.TestCase):
     """Runs against dist/ after `python3 make_brochure.py`."""

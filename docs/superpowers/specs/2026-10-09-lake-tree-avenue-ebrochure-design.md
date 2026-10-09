@@ -56,6 +56,12 @@ describe the **earlier, different project** — Lake Tree, Ajwa Road, by Leo Ent
 
 The Waghodia Main Road location requires its own landmark set, written fresh.
 
+### 2.1a Location landmarks (supplied 2026-10-09)
+
+The site sits on the main Waghodia Road **between Parul University and
+Sumandeep College**, next to Spunpipe & Construction Co., Kamlapura. This closes
+the "Waghodia Road landmarks" open item in §9.
+
 ### 2.2 Assets available
 
 | Asset | Path | Use |
@@ -67,13 +73,27 @@ The Waghodia Main Road location requires its own landmark set, written fresh.
 
 ### 2.3 Unit dimensions (from REV.LAYOUT, authoritative)
 
-Type B (plots 07–48): kitchen 10'-6" × 8'-1½"; bedroom 11'-0" × 12'-6"; bedroom
-10'-1½" × 10'-7½"; att. toilet 6'-0" × 5'-0"; standing balcony 2'-0" wide; store; O.T.S.
-Plot frontage 25'-3" [7.70 m], depth 39'-1" [11.91 m].
+**Corrected 2026-10-09 after review.** An earlier version of this section gave Type B's
+frontage as 25'-3" [7.70 m]. That is wrong: 25'-3" [7.70] is the middle segment of
+**Type A's** depth chain (1.85 + 7.70 + 2.75 = 12.30 m). Pairing it with Type B's depth
+advertised 91.7 m² of land where the drawing gives 65.7 m² — a 40% overstatement. The
+values below were read off the drawing at 7–9× zoom and are authoritative.
 
-Type A (plots 01–06): kitchen 9'-9½" × 9'-1½"; bedroom 10'-9½" × 12'-6"; store;
-standing balcony 2'-0" wide. Remaining dimensions to be read off the layout during
-implementation; nothing is to be invented.
+Type B (plots 07–48) — plot 18'-1½" × 39'-1" [5.52 m × 11.91 m]:
+living room/dining 17'-4½" × 15'-0"; kitchen 10'-6" × 8'-1½"; store; toilet
+4'-6" × 5'-0"; bedroom 11'-0" × 12'-6"; bedroom 10'-1½" × 10'-7½"; att. toilet
+6'-0" × 5'-0"; att. toilet 4'-0" × 7'-0"; two standing balconies 2'-0" wide; O.T.S.;
+wash area; otta.
+
+Type A (plots 01–06) — plot 17'-5" × 40'-4½" [5.31 m × 12.30 m]:
+living room/dining 16'-8" × 15'-0"; kitchen 9'-9½" × 9'-1½"; store; toilet
+4'-6" × 5'-0"; bedroom 10'-9½" × 12'-6"; bedroom 10'-9½" × 11'-7½"; att. toilet
+5'-6" × 5'-0"; att. toilet 4'-0" × 7'-0"; two standing balconies 2'-0" wide; wash
+area; otta.
+
+Both types are two-bedroom homes with two attached toilets upstairs and one toilet at
+ground level. Several of these labels are vector outlines rather than text, so they
+cannot be extracted — they were read from a high-zoom render. Nothing is to be invented.
 
 ### 2.4 Specification and amenity copy (carried forward, still accurate)
 
@@ -140,7 +160,22 @@ states (no data), RERA block, lead-capture form (no backend), analytics.
 - Target size ≤ 8 MB so WhatsApp accepts it comfortably (WhatsApp's document limit is
   100 MB, but large files deter opening on mobile data).
 
-## 6. Plot hotspot derivation
+## 6. Plot hotspots — removed 2026-10-09
+
+Originally every one of the 48 plots was a separate tap target carrying a
+prefilled per-plot WhatsApp enquiry. The owner removed this: the plots are
+near-identical, so forty-eight enquiry links were noise rather than choice, and
+availability is a conversation rather than a published state.
+
+The site plan is still shown in both artefacts as an image. The three calls to
+action are now the same everywhere: the phone number calls **and** opens
+WhatsApp, and the address opens Google Maps.
+
+The hotspot derivation (label extraction, the `/Rotate 180` correction and the
+hand-placed centres for the eight unlabelled plots) is preserved in git history
+at commit `2061e55` should per-plot linking ever be wanted again.
+
+### Former hotspot derivation (historical)
 
 Plot numbers are extracted from `REV.LAYOUT - 07-10-2026.pdf` via PyMuPDF word
 positions, filtered to the label glyph size (~29 × 26 pt) to exclude dimension text
@@ -190,8 +225,7 @@ volume.
   advertising a project that requires registration. Flagged once; collateral is being
   built without any RERA line per the owner's instruction. Confirm with counsel before
   the Meta campaign goes live.
-- **Waghodia Road landmarks.** The old key plan cannot be reused. A landmark set for the
-  Kamlapura / Waghodia Main Road location is needed; drafted during implementation and
-  confirmed by the owner before publishing.
+- ~~**Waghodia Road landmarks.**~~ Closed 2026-10-09: the owner supplied them — between
+  Parul University and Sumandeep College. See §2.1a.
 - **Google Maps URL.** Exact pin for the site to be supplied or derived and confirmed.
 - **Type A dimensions.** To be read off the layout during implementation.

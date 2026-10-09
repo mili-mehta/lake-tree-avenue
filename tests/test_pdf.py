@@ -45,12 +45,13 @@ class TestPdf(unittest.TestCase):
                 self.assertTrue(r.is_valid and not r.is_empty, f"page {i+1} empty rect")
                 self.assertTrue(r in page.rect, f"page {i+1} rect outside page: {r}")
 
-    def test_layout_page_has_all_forty_eight_distinct_plot_links(self):
-        page = self.doc[4]
-        plot_uris = {u for u in self._uris(page) if "Plot%20" in u}
-        self.assertEqual(len(plot_uris), 48)
-        for n in range(1, 49):
-            self.assertIn(content.plot_wa_link(n), plot_uris, f"plot {n} missing")
+    def test_no_per_plot_link_annotations(self):
+        for i, page in enumerate(self.doc):
+            self.assertFalse([u for u in self._uris(page) if "Plot%20" in u],
+                             f"page {i+1} still carries per-plot links")
+
+    def test_layout_page_carries_only_the_footer_links(self):
+        self.assertEqual(len(self.doc[4].get_links()), 4)
 
     def test_contact_details_are_readable_text_not_only_links(self):
         text = "\n".join(p.get_text() for p in self.doc)
@@ -58,9 +59,52 @@ class TestPdf(unittest.TestCase):
         self.assertIn(content.PROJECT["email"], text)
 
     def test_no_forbidden_terms_in_extracted_text(self):
-        text = "\n".join(p.get_text() for p in self.doc).lower()
-        for term in content.FORBIDDEN:
-            self.assertNotIn(term.lower(), text, f"forbidden term: {term}")
+        # insert_textbox wraps, and get_text reports a wrap as a newline, so a
+        # raw substring check misses "The\nPalace". forbidden_hits collapses
+        # whitespace first.
+        text = "\n".join(p.get_text() for p in self.doc)
+        self.assertEqual(content.forbidden_hits(text), [])
+
+    def test_specification_text_is_never_silently_truncated(self):
+        # insert_textbox returns a negative value when the copy does not fit
+        # and writes only what did. Swallowing that drops the tail of a
+        # specification mid-sentence with every test still green.
+        import unittest.mock
+        long_copy = ("Reinforced cement concrete frame with steel conforming "
+                     "to IS 1786 for all reinforcement in columns, beams and "
+                     "slabs, and an independent third party structural audit "
+                     "before handover of each home. " * 6)
+        groups = (("Structure", long_copy),) + content.SPEC_GROUPS[1:]
+        with unittest.mock.patch.object(content, "SPEC_GROUPS", groups):
+            with self.assertRaises(build_pdf.LayoutOverflow):
+                build_pdf.build_doc()
+
+    def test_schedule_rows_never_run_past_the_footer(self):
+        # A schedule that outgrows its page silently drops its last rows —
+        # on the plans page that is the plot size, the single number a buyer
+        # most wants.
+        for i, page in enumerate(self.doc):
+            for block in page.get_text("blocks"):
+                if not block[4].strip():
+                    continue
+                self.assertLessEqual(
+                    block[3], build_pdf.FOOTER_TOP + 32,
+                    f"page {i+1} text runs into the footer: {block[4][:40]!r}")
+
+    def test_every_unit_room_appears_on_the_plans_page(self):
+        text = " ".join(self.doc[3].get_text().split())
+        for key, unit in content.UNIT_TYPES.items():
+            for room, dim in unit["rooms"]:
+                self.assertIn(room, text, f"Type {key} missing row {room!r}")
+                self.assertIn(" ".join(dim.split()), text,
+                              f"Type {key} missing dimension for {room!r}")
+
+    def test_every_specification_group_appears_in_full(self):
+        text = " ".join(p.get_text() for p in self.doc)
+        flat = " ".join(text.split())
+        for label, body in content.SPEC_GROUPS:
+            self.assertIn(" ".join(body.split()), flat,
+                          f"{label} copy is cut short")
 
     def test_no_price_in_extracted_text(self):
         text = "\n".join(p.get_text() for p in self.doc)

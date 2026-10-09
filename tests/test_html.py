@@ -1,6 +1,6 @@
 import re
 import unittest
-from build import build_html, content, plots
+from build import build_html, content
 
 
 class TestHtml(unittest.TestCase):
@@ -32,13 +32,18 @@ class TestHtml(unittest.TestCase):
                        'type="module"', "import("):
             self.assertNotIn(banned, self.html, f"file:// hostile API: {banned}")
 
-    def test_all_forty_eight_plot_links_present(self):
-        for n in range(1, 49):
-            self.assertIn(content.plot_wa_link(n), self.html, f"plot {n} link missing")
+    def test_no_per_plot_links(self):
+        # The plots are near-identical, so 48 separate enquiry links were
+        # noise. One enquiry CTA, not forty-eight.
+        self.assertNotIn("Plot%20", self.html)
+        self.assertNotIn('class="plot"', self.html)
 
-    def test_hotspot_rect_count_matches_plot_count(self):
-        self.assertEqual(len(re.findall(r"<rect[^>]*class=\"plot\"", self.html)),
-                         len(plots.hotspots()))
+    def test_phone_number_offers_both_calling_and_whatsapp(self):
+        self.assertIn(content.tel_link(), self.html)
+        self.assertIn('data-cta="whatsapp"', self.markup)
+
+    def test_address_opens_google_maps(self):
+        self.assertIn(content.PROJECT["maps_url"], self.html)
 
     def test_primary_ctas_present(self):
         self.assertIn(content.tel_link(), self.html)
@@ -49,9 +54,9 @@ class TestHtml(unittest.TestCase):
         self.assertIn(content.PROJECT["phone_display"], self.html)
 
     def test_no_forbidden_terms(self):
-        low = self.markup.lower()
-        for term in content.FORBIDDEN:
-            self.assertNotIn(term.lower(), low, f"forbidden term: {term}")
+        # Element boundaries split phrases too: "3 BHK" spanning </td><td>
+        # would slip past a raw substring check.
+        self.assertEqual(content.forbidden_hits(self.markup), [])
 
     def test_no_price(self):
         self.assertIsNone(re.search(r"(₹|Rs\.?\s*\d)", self.markup))

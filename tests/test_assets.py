@@ -1,7 +1,7 @@
 import io
 import unittest
 from PIL import Image
-from build import assets, plots
+from build import assets
 
 
 def _open(blob):
@@ -61,7 +61,7 @@ class TestLayout(unittest.TestCase):
 
     def test_layout_can_crop_to_the_site_plan(self):
         full = _open(assets.layout_png(width=1200))
-        site = _open(assets.layout_png(width=1200, box=plots.SITE_BOX))
+        site = _open(assets.layout_png(width=1200, box=assets.SITE_BOX))
         self.assertEqual(site.width, 1200)
         # the site plan is wider relative to its height than the whole sheet
         self.assertLess(site.height / site.width, full.height / full.width)
