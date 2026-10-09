@@ -94,11 +94,33 @@ AMENITIES = (
 )
 
 LOCATION_ROWS = (
-    ("Road", "Main Waghodia Road frontage"),
+    ("Road", "Waghodia Main Road frontage"),
     ("Between", "Parul University and Sumandeep College"),
     ("Next to", "Spunpipe & Construction Co."),
     ("Area", "Kamlapura, Vadodara"),
     ("Corridor", "Vadodara east, toward Halol"),
+)
+
+# The landmarks the key plan pins, and how far each one is by road.
+#
+# These figures exist nowhere else: the key plan carries them as artwork,
+# and a picture of a number is invisible to a screen reader, to a search
+# engine and to anyone who copies a line to send on. So they are set as
+# text beside the drawing rather than left in its pixels.
+#
+# Latin names, in every language, for the same reason LOCATION_ROWS keeps
+# "Parul University" Latin: that is how a Vadodara buyer reads them. Only
+# the unit moves.
+KEY_PLAN_ROWS = (
+    ("Parul University", "2.3 km"),
+    ("Sumandeep Vidyapeeth", "2.3 km"),
+    ("Dhiraj Hospital", "2.3 km"),
+    ("Avalon World School", "2.5 km"),
+    ("Waghodia GIDC", "4.2 km"),
+    ("L&T Knowledge City", "8.8 km"),
+    ("Nimeta Garden", "9.7 km"),
+    ("AATAPI Wonderland", "10.1 km"),
+    ("Vadodara Airport", "13.8 km"),
 )
 
 SECTIONS = (
@@ -112,7 +134,7 @@ SECTIONS = (
     {
         "id": "project",
         "title": "Forty-eight homes on one quiet avenue",
-        "lead": "2 BHK townhouses in a gated campus off Waghodia Main Road.",
+        "lead": "2 BHK townhouses in a gated campus on Waghodia Main Road.",
         "body": (
             "Lake Tree Avenue is a gated campus of 48 two-bedroom townhouses, "
             "each with its own entrance, private terrace and parking.",
@@ -146,7 +168,7 @@ SECTIONS = (
     {
         "id": "location",
         "title": "Between Parul and Sumandeep",
-        "lead": "On the main Waghodia Road, in the stretch between Parul "
+        "lead": "On Waghodia Main Road, in the stretch between Parul "
                 "University and Sumandeep College.",
         "body": ("The gate opens onto the main road, so there is no approach "
                  "lane to negotiate and no last-mile detour.",
@@ -202,6 +224,13 @@ UI = {
     "alt_logo": "Lake Tree Avenue",
     "alt_site_plan": ("Site plan showing 48 numbered plots, the internal "
                       "roads, the common plot and the entry gate"),
+    "key_plan_subtitle": "What stands either side of the gate",
+    "nearby": "By road from the gate",
+    "key_plan_note": "Distances are approximate, measured by road.",
+    "alt_key_plan": ("Key plan: Lake Tree Avenue on Waghodia Main Road, with the "
+                     "schools, hospitals, universities and landmarks either "
+                     "side of it pinned along the road. Not to scale; the "
+                     "distances are listed beside it."),
     "alt_plan_sheet": "{caption} plan for plots {range}, with room dimensions",
 }
 

@@ -11,10 +11,11 @@ import fitz
 from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-LOGO_SRC = os.path.join(ROOT, "images", "lake-tree-avenue-logo.PNG")
-RENDER_SRC = os.path.join(ROOT, "images", "lake-tree-avenue.jpg")
+LOGO_SRC = os.path.join(ROOT, "images", "Lake Tree Avenue new-Logo.png")
+RENDER_SRC = os.path.join(ROOT, "images", "lake-tree-avenue.PNG")
 LAYOUT_SRC = os.path.join(ROOT, "REV.LAYOUT - 07-10-2026.pdf")
 SITE_PLAN_SRC = os.path.join(ROOT, "images", "site-plan.png")
+KEY_PLAN_SRC = os.path.join(ROOT, "images", "Lake Tree Avenue Key Plan.png")
 
 # The floor plans as issued: one sheet per floor per unit type, each
 # showing an adjacent pair of townhouses. Ground floor first, the order a
@@ -73,28 +74,18 @@ def _trim_white(img: Image.Image) -> Image.Image:
 def logo_png(height: int = 420) -> bytes:
     """Trimmed logo on a transparent ground.
 
-    The source art is drawn on white. Both artefacts place the logo on sand,
-    where a white plate would read as a pasted sticker, so near-white pixels
-    become transparent and the artwork keeps its own edges.
+    The source art already carries its own alpha, so the ground is kept as
+    drawn: both artefacts place the logo on sand, where a white plate would
+    read as a pasted sticker, and keying out near-white would eat the light
+    strokes inside the leaves.
     """
-    img = Image.open(LOGO_SRC).convert("RGB")
-    img = _trim_white(img)
+    img = Image.open(LOGO_SRC).convert("RGBA")
+    box = img.getchannel("A").getbbox()
+    if box is not None:
+        img = img.crop(box)
     ratio = height / img.height
     img = img.resize((max(1, round(img.width * ratio)), height), Image.LANCZOS)
-
-    rgba = img.convert("RGBA")
-    px = rgba.load()
-    w, h = rgba.size
-    for y in range(h):
-        for x in range(w):
-            r, g, b, _ = px[x, y]
-            lightest = max(r, g, b)
-            if lightest > _WHITE:
-                px[x, y] = (r, g, b, 0)
-            elif lightest > 215:
-                # feather the antialiased rim instead of leaving a hard edge
-                px[x, y] = (r, g, b, round(255 * (_WHITE - lightest) / 32))
-    return _encode(rgba, "PNG", optimize=True)
+    return _encode(img, "PNG", optimize=True)
 
 
 def render_jpeg(width: int = 1600, quality: int = 78) -> bytes:
@@ -134,6 +125,26 @@ def site_plan_jpeg(width: int = 1500, quality: int = 82) -> bytes:
     ratio = width / img.width
     img = img.resize((width, max(1, round(img.height * ratio))), Image.LANCZOS)
     return _encode(img, "JPEG", quality=quality, optimize=True, progressive=True)
+
+
+def key_plan_jpeg(width: int = 1400, quality: int = 85) -> bytes:
+    """The landmark key plan: what stands either side of the gate, and how far.
+
+    Unlike the site plan this is finished artwork rather than a drawing --
+    it carries its own logo, its own "NOT TO SCALE" note and a photographic
+    sky behind the pins, so it is placed whole and never trimmed. The cream
+    border is part of the composition; cropping to ink would eat it.
+
+    Its labels are English in all three documents. Repainting a raster of
+    someone else's artwork per language is not something a build should do,
+    so the translation lives in the accessible name instead, which is also
+    the only form a screen reader or a search engine ever sees.
+    """
+    img = Image.open(KEY_PLAN_SRC).convert("RGB")
+    ratio = width / img.width
+    img = img.resize((width, max(1, round(img.height * ratio))), Image.LANCZOS)
+    return _encode(img, "JPEG", quality=quality, optimize=True,
+                   progressive=True)
 
 
 def plan_sheets(unit_key: str, quality: int = 92) -> dict[str, bytes]:

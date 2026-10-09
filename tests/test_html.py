@@ -303,6 +303,47 @@ class TestHtml(unittest.TestCase):
         self.assertLess(len(self.html.encode("utf-8")), 6 * 1024 * 1024)
 
 
+class TestKeyPlan(unittest.TestCase):
+    """The landmark drawing and the distances it pins.
+
+    The drawing is a raster with English labels burnt into it, so the list
+    beside it is the only form of those figures that translates, that a
+    screen reader reaches and that a reader can select and send on.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.html = build_html.render_html()
+
+    def test_the_drawing_is_embedded_once(self):
+        self.assertIn(".shot-key-plan {", self.html)
+        self.assertEqual(self.html.count(".shot-key-plan {"), 1)
+
+    def test_each_language_names_the_drawing_in_its_own_words(self):
+        labels = re.findall(r'class="shot shot-key-plan" role="img" '
+                            r'aria-label="([^"]+)"', self.html)
+        self.assertEqual(len(labels), 3, labels)
+        self.assertEqual(len(set(labels)), 3, "a language reuses another's alt")
+
+    def test_every_distance_is_set_as_text_in_every_language(self):
+        for code in copy.LOCALES:
+            words = copy.for_locale(code)
+            for place, away in words.KEY_PLAN_ROWS:
+                self.assertIn(f"<li><b>{place.replace('&', '&amp;')}</b>"
+                              f"<span>{away}</span></li>", self.html,
+                              f"{code}: {place} is missing its distance")
+
+    def test_the_distances_sit_inside_the_location_section(self):
+        # Beside the prose about the road, not stranded in another band.
+        section = self.html.split('id="en-location"')[1].split("</section>")[0]
+        self.assertIn("shot-key-plan", section)
+        self.assertIn('class="distances"', section)
+
+    def test_the_drawing_is_called_not_to_scale(self):
+        for code in copy.LOCALES:
+            self.assertIn(copy.for_locale(code).UI["key_plan_note"], self.html)
+
+
 class TestLanguageToggle(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

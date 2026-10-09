@@ -197,6 +197,20 @@ section { padding: 84px 0; }
   margin-top: 14px; display: flex; gap: 22px; flex-wrap: wrap;
 }
 
+/* The key plan's distances, set as text under the drawing. The drawing
+   carries them too, as artwork; these are the copy a screen reader
+   reaches, a search engine indexes and a reader can select and send on. */
+.distances { list-style: none; margin: 18px 0 0; padding: 0;
+  display: grid; grid-template-columns: 1fr; }
+.distances li {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 16px; padding: 9px 0; border-top: 1px solid var(--rule);
+  font-family: var(--sans); font-size: 0.86rem;
+}
+.distances b { font-weight: 600; }
+.distances span { color: var(--ink-soft); font-variant-numeric: tabular-nums;
+  white-space: nowrap; }
+
 /* ---------- specifications ---------- */
 .spec-list { margin: 0; }
 .spec-list div {
@@ -252,6 +266,7 @@ footer img { width: 128px; margin-bottom: 18px; }
   .plan-grid-stacked { grid-template-columns: 1fr; gap: 34px; }
   .spec-list div { grid-template-columns: 210px 1fr; gap: 26px; }
   .amenities { columns: 2; }
+  .distances { grid-template-columns: 1fr 1fr; column-gap: 44px; }
   .contact-grid { grid-template-columns: repeat(3, 1fr); gap: 44px; }
   .bar { display: none; }
   footer { padding-bottom: 60px; }
@@ -437,6 +452,7 @@ def _imagery() -> dict:
     out = {
         "hero": (assets.render_jpeg(1600), "image/jpeg"),
         "site-plan": (assets.site_plan_jpeg(1500), "image/jpeg"),
+        "key-plan": (assets.key_plan_jpeg(1400), "image/jpeg"),
         "logo": (assets.logo_png(260), "image/png"),
     }
     for unit_key in content.UNIT_TYPES:
@@ -684,6 +700,27 @@ def _document(locale: str, words) -> str:
     out.append('<div class="measure">')
     out.extend(f"<p>{_esc(b)}</p>" for b in s["location"]["body"])
     out.append("</div>")
+
+    # The key plan: the same drawing the PDF carries, with its distances
+    # repeated underneath as text. The artwork's own labels are English in
+    # every language -- it is a raster, not copy -- so the list below it is
+    # what actually translates, and what a screen reader reads out.
+    out.append('<div class="sheet" style="margin-top:40px">'
+               '<div class="sheet-inner">')
+    # The drawing titles itself -- "KEY PLAN", top right, inside the
+    # artwork -- so the sheet header says what the drawing is for instead
+    # of repeating its name back at the reader.
+    out.append(f'<div class="sheet-title"><b>{_esc(ui["key_plan_subtitle"])}'
+               f'</b><span>{_esc(ui["key_plan_note"])}</span></div>')
+    out.append('<div class="map">'
+               + _shot("key-plan", ui["alt_key_plan"]) + "</div>")
+    out.append(f'<div class="dim"><span>{_esc(ui["nearby"])}</span></div>')
+    out.append('<ul class="distances">')
+    out.extend(f"<li><b>{_esc(place)}</b><span>{_esc(away)}</span></li>"
+               for place, away in words.KEY_PLAN_ROWS)
+    out.append("</ul>")
+    out.append("</div></div>")
+
     rows = "".join(
         f'<tr><th scope="row">{_esc(k)}</th><td>{_esc(v)}</td></tr>'
         for k, v in words.LOCATION_ROWS)

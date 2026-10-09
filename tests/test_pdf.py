@@ -21,14 +21,16 @@ def _unligate(text: str) -> str:
     return text
 
 # cover, project, then a page per floor per type, then
-# layout, specs, location, contact
+# layout, specs, location, key plan, contact
 PLAN_PAGES = {"A": (2, 3), "B": (4, 5)}
 GROUND_PAGE = {key: pages[0] for key, pages in PLAN_PAGES.items()}
 FIRST_PAGE = {key: pages[1] for key, pages in PLAN_PAGES.items()}
 ALL_PLAN_PAGES = [i for pages in PLAN_PAGES.values() for i in pages]
 LAYOUT_PAGE = 6
 SPECS_PAGE = 7
-CONTACT_PAGE = 9
+LOCATION_PAGE = 8
+KEY_PLAN_PAGE = 9
+CONTACT_PAGE = 10
 
 
 class TestPdf(unittest.TestCase):
@@ -43,11 +45,11 @@ class TestPdf(unittest.TestCase):
     def tearDownClass(cls):
         os.unlink(cls.path)
 
-    def test_ten_pages_a4_landscape(self):
+    def test_eleven_pages_a4_landscape(self):
         # Both types take a page per floor. Two sheets sharing one page
         # shrink to roughly half the width, and at that size the room
         # dimensions printed inside them stop being readable.
-        self.assertEqual(self.doc.page_count, 10)
+        self.assertEqual(self.doc.page_count, 11)
         for page in self.doc:
             self.assertAlmostEqual(page.rect.width, 842.0, places=0)
             self.assertAlmostEqual(page.rect.height, 595.0, places=0)
@@ -324,12 +326,12 @@ class TestEveryLanguage(unittest.TestCase):
             doc.close()
             os.unlink(cls.paths[locale])
 
-    def test_every_language_builds_the_same_ten_pages(self):
+    def test_every_language_builds_the_same_eleven_pages(self):
         # A LayoutOverflow during the build is the real assertion here:
         # Devanagari runs longer than English, and a box tuned for the
         # English would drop the tail of a sentence.
         for locale, doc in self.docs.items():
-            self.assertEqual(doc.page_count, 10, locale)
+            self.assertEqual(doc.page_count, 11, locale)
 
     def test_every_indic_character_has_a_glyph(self):
         # A font missing one conjunct still renders the line, with a hole
@@ -446,6 +448,59 @@ class TestEveryLanguage(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestKeyPlan(unittest.TestCase):
+    """The landmark drawing's page, and the distances facing it."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.doc = build_pdf.build_doc()
+
+    def test_the_drawing_has_a_page_to_itself(self):
+        # It is four parts wide to three tall on a landscape page, so the
+        # page height is what limits it and there is no column to spare.
+        page = self.doc[KEY_PLAN_PAGE]
+        self.assertEqual(len(page.get_images()), 1)
+
+    def test_the_drawing_fills_the_page_it_was_given(self):
+        page = self.doc[KEY_PLAN_PAGE]
+        rect = page.get_image_rects(page.get_images()[0][0])[0]
+        self.assertGreater(rect.height, 420,
+                           "the key plan sets too small to read its pins")
+        self.assertGreater(rect.width, 560)
+
+    def test_the_drawing_page_carries_nothing_but_its_caption(self):
+        # The distances belong on the location page, at a reading size.
+        text = _unligate(" ".join(self.doc[KEY_PLAN_PAGE].get_text().split()))
+        self.assertIn(EN.UI["key_plan_note"], text)
+        for place, _ in EN.KEY_PLAN_ROWS:
+            self.assertNotIn(place, text, f"{place} repeats on the drawing page")
+
+    def test_every_distance_is_set_as_text_on_the_location_page(self):
+        text = _unligate(" ".join(self.doc[LOCATION_PAGE].get_text().split()))
+        self.assertIn(EN.UI["nearby"], text)
+        for place, away in EN.KEY_PLAN_ROWS:
+            self.assertIn(place, text, f"{place} is missing")
+            self.assertIn(away, text, f"{place} has no distance")
+
+    def test_every_language_sets_every_distance(self):
+        # Asserted on the place name and the figure, which are Latin in all
+        # three documents. The unit beside them is "km", "किमी" or "કિમી",
+        # and MuPDF's extractor breaks an Indic conjunct back into the
+        # codepoints it was composed from, so the extracted string is not
+        # the source string. That the glyphs exist at all is
+        # test_every_indic_character_has_a_glyph's job, not this one's.
+        for locale in copy.LOCALES:
+            words = copy.for_locale(locale)
+            doc = build_pdf.build_doc(locale)
+            text = _unligate(" ".join(doc[LOCATION_PAGE].get_text().split()))
+            for place, away in words.KEY_PLAN_ROWS:
+                figure = away.split()[0]
+                self.assertIn(place, text, f"{locale}: {place} is missing")
+                self.assertIn(f"{place} {figure}", text,
+                              f"{locale}: {place} is not beside {figure}")
+            doc.close()
 
 
 class TestDeterminism(unittest.TestCase):

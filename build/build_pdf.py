@@ -513,6 +513,43 @@ def _location(doc, art):
     _text(page, rect + (12, 8, 0, 0), art["words"].UI["get_directions"], font=SANS_BOLD,
           size=9.5, color=TERRA_DEEP)
     page.insert_link({"kind": fitz.LINK_URI, "from": rect, "uri": p["maps_url"]})
+
+    # The key plan's distances, as text. The drawing itself is on the page
+    # that follows, where its own labels set small; these are the figures a
+    # reader can actually read, and the only form of them that translates.
+    words = art["words"]
+    _fill(page, fitz.Rect(0, 400, PAGE_SIZE[0], FOOTER_TOP - 10), SAND)
+    _text(page, fitz.Rect(MARGIN, 412, MARGIN + 320, 434),
+          words.UI["nearby"], font=SANS_BOLD, size=9, color=INK_SOFT)
+    col_w = (PAGE_SIZE[0] - 2 * MARGIN) / 3
+    rows = words.KEY_PLAN_ROWS
+    third = (len(rows) + 2) // 3
+    for col in range(3):
+        _schedule(page, rows[col * third:(col + 1) * third],
+                  MARGIN + col * col_w, 436.0, col_w - 20,
+                  label_w=col_w - 76, size=8.5, pitch=24.0)
+    _footer(page, art["words"])
+    return page
+
+
+def _key_plan(doc, art):
+    """The landmark drawing, on a page of its own.
+
+    It is four parts wide to three tall and this page is A4 landscape, so
+    the page height is what limits it and there is no column to spare
+    beside it. Nothing else goes on the sheet: the distances it pins are
+    set as text on the location page facing it, where they can be read at
+    a reading size rather than squinted at inside the artwork.
+    """
+    page = _page(doc)
+    _fill(page, fitz.Rect(0, 0, PAGE_SIZE[0], PAGE_SIZE[1]), SAND)
+    _place_image(page, art["key_plan"],
+                 fitz.Rect(MARGIN, MARGIN, PAGE_SIZE[0] - MARGIN,
+                           FOOTER_TOP - 24),
+                 pad=8, frame=True)
+    _text(page, fitz.Rect(MARGIN, FOOTER_TOP - 22, PAGE_SIZE[0] - MARGIN,
+                          FOOTER_TOP - 4), art["words"].UI["key_plan_note"],
+          font=SANS, size=8.5, color=INK_SOFT, align=1)
     _footer(page, art["words"])
     return page
 
@@ -572,6 +609,7 @@ def build_doc(locale: str = copy.DEFAULT) -> fitz.Document:
         "logo": assets.logo_png(420),
         "render": assets.render_jpeg(1800),
         "site": assets.site_plan_jpeg(1500),
+        "key_plan": assets.key_plan_jpeg(1400),
         "sections": {s["id"]: s for s in words.SECTIONS},
         "words": words,
         "locale": locale,
@@ -582,7 +620,8 @@ def build_doc(locale: str = copy.DEFAULT) -> fitz.Document:
     doc = fitz.open()
     with _using(locale):
         for builder in (_cover, _project, _plans,
-                        _layout, _specs, _location, _contact):
+                        _layout, _specs, _location, _key_plan,
+                        _contact):
             builder(doc, art)
     doc.set_metadata({
         "title": content.PROJECT["name"],

@@ -15,6 +15,12 @@ LATIN_OK = (
     "Alkapuri", "Halol", "Ramkrishna Chambers", "BPC Road", "Regd",
     "Office", "laketreeavenue@gmail.com", "@laketreeavenue",
     "AC", "PDF", "Tremix",
+    # The landmarks the key plan pins. A Vadodara buyer reads every one of
+    # these in Latin, whichever language the line around it is in, so the
+    # names stay put and only the unit beside them is translated.
+    "Parul University", "Sumandeep Vidyapeeth", "Dhiraj Hospital",
+    "Avalon World School", "Waghodia GIDC", "L&T Knowledge City",
+    "Nimeta Garden", "AATAPI Wonderland", "Vadodara Airport",
 )
 
 DEVANAGARI = r"ऀ-ॿ"
@@ -79,6 +85,7 @@ class TestCopyParity(unittest.TestCase):
             self.assertEqual(len(words.SPEC_GROUPS), 9, code)
             self.assertEqual(len(words.AMENITIES), 8, code)
             self.assertEqual(len(words.LOCATION_ROWS), 5, code)
+            self.assertEqual(len(words.KEY_PLAN_ROWS), 9, code)
 
 
 class TestCopyIsActuallyTranslated(unittest.TestCase):

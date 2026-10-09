@@ -143,6 +143,39 @@ class TestPlanSheets(unittest.TestCase):
             self.assertLess(len(blob), 700_000, key)
 
 
+class TestKeyPlan(unittest.TestCase):
+    """The landmark drawing: finished artwork, placed whole."""
+
+    def setUp(self):
+        self.blob = assets.key_plan_jpeg(width=1400)
+        self.img = _open(self.blob)
+
+    def test_key_plan_is_jpeg_at_requested_width(self):
+        self.assertEqual(self.img.format, "JPEG")
+        self.assertEqual(self.img.width, 1400)
+
+    def test_key_plan_keeps_the_source_aspect(self):
+        with Image.open(assets.KEY_PLAN_SRC) as src:
+            want = src.height / src.width
+        self.assertAlmostEqual(self.img.height / self.img.width, want,
+                               places=2)
+
+    def test_key_plan_keeps_its_own_border(self):
+        # The cream surround is the composition, not blank paper around it.
+        # Trimming to ink would crop into the artwork.
+        trimmed = assets._trim_white(self.img.convert("RGB"))
+        self.assertEqual(trimmed.size, self.img.size)
+
+    def test_key_plan_stays_legible(self):
+        # Pin labels and distances are fine dark text over a pale sky.
+        lo, hi = self.img.convert("L").getextrema()
+        self.assertLess(lo, 70, "the key plan lost its darkest ink")
+        self.assertGreater(hi, 230, "the key plan lost its paper")
+
+    def test_key_plan_under_budget(self):
+        self.assertLess(len(self.blob), 400_000)
+
+
 class TestDataUri(unittest.TestCase):
     def test_data_uri_shape(self):
         uri = assets.data_uri(b"abc", "image/png")
