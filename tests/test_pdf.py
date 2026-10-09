@@ -151,3 +151,22 @@ class TestPdf(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestDeterminism(unittest.TestCase):
+    def test_building_twice_produces_identical_bytes(self):
+        # PDFs embed a creation timestamp by default, so every rebuild would
+        # rewrite dist/ and leave the working tree dirty for no reason.
+        paths = []
+        for _ in range(2):
+            fd, path = tempfile.mkstemp(suffix=".pdf")
+            os.close(fd)
+            build_pdf.write(path)
+            paths.append(path)
+        try:
+            with open(paths[0], "rb") as a, open(paths[1], "rb") as b:
+                self.assertEqual(a.read(), b.read(),
+                                 "two builds of the same source differ")
+        finally:
+            for path in paths:
+                os.unlink(path)
