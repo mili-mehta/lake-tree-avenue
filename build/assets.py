@@ -154,5 +154,17 @@ def plan_sheets(unit_key: str, quality: int = 92) -> dict[str, bytes]:
     return out
 
 
+def dimensions(blob: bytes) -> tuple[int, int]:
+    """The pixel size of an encoded image.
+
+    The HTML shows its pictures as CSS backgrounds so that the bytes are
+    embedded once rather than once per language. A background box has no
+    intrinsic size, so each one is given the aspect ratio its picture
+    actually has -- otherwise the page reflows as the images paint.
+    """
+    with Image.open(io.BytesIO(blob)) as img:
+        return img.size
+
+
 def data_uri(blob: bytes, mime: str) -> str:
     return f"data:{mime};base64," + base64.b64encode(blob).decode("ascii")

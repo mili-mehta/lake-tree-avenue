@@ -8,7 +8,7 @@ SVG anchors that work with no JavaScript at all.
 import html
 import os
 
-from build import assets, content
+from build import assets, content, copy, fonts
 
 CSS = """
 :root {
@@ -257,9 +257,64 @@ footer img { width: 128px; margin-bottom: 18px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero-figure img { animation: none; }
+  .hero-figure .shot { animation: none; }
   * { transition: none !important; }
 }
+
+/* ---- pictures -------------------------------------------------------
+   Every picture is painted as a CSS background rather than an <img>,
+   because the page carries three documents and an <img> would embed the
+   same base64 three times -- 8.7 MB where 2.9 MB will do. A background
+   box has no intrinsic size, so each rule below also carries the aspect
+   ratio of the picture it paints. */
+.shot {
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  width: 100%;
+}
+.hero-figure .shot {
+  background-size: cover;
+  animation: settle 7s cubic-bezier(.2,.6,.2,1) both;
+}
+footer .shot { width: 128px; margin: 0 auto 18px; }
+
+/* A background does not print unless the page says so, and a brochure
+   gets printed. */
+@media print {
+  .shot { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+
+/* ---- the language toggle --------------------------------------------
+   Radio inputs and sibling selectors, the same mechanism as the plan
+   tabs: the page is opened from file:// on phones where scripting may be
+   unavailable, and a toggle that needs JavaScript is a toggle that
+   sometimes is not there. The radios sit before every document so a
+   plain ~ combinator reaches all three -- no :has(), which old Android
+   WebViews do not have. */
+.lang-radio { position: absolute; opacity: 0; pointer-events: none; }
+.langbar {
+  position: sticky; top: 0; z-index: 30;
+  display: flex; gap: 6px; justify-content: center;
+  padding: 10px 16px;
+  background: rgba(255,255,255,0.94);
+  backdrop-filter: saturate(140%) blur(8px);
+  border-bottom: 1px solid var(--rule);
+}
+.langbar label {
+  cursor: pointer;
+  padding: 7px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--rule);
+  background: #ffffff;
+  color: var(--ink-soft);
+  font-family: var(--sans);
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.doc { display: none; }
 """
 
 
@@ -376,24 +431,98 @@ def _icon(name: str, size: int = 20, *, mono: bool = False) -> str:
             f'focusable="false">{body}</svg>')
 
 
-def _schedule_rows() -> str:
-    rows = (
-        ("Homes", "48 townhouses, two bedrooms each"),
-        ("Plan types", "Type A, plots 01–06 &nbsp;/&nbsp; Type B, plots 07–48"),
-        ("Approach road", "12.00 m town planning road"),
-        ("Internal roads", "7.50 m, paved both sides"),
-        ("Levels", "Ground, first and private terrace"),
-        ("Parking", "On plot, plus open-space parking"),
-    )
+# Each picture, encoded once. The key is also its CSS class suffix.
+def _imagery() -> dict:
+    out = {
+        "hero": (assets.render_jpeg(1600), "image/jpeg"),
+        "site-plan": (assets.site_plan_jpeg(1500), "image/jpeg"),
+        "logo": (assets.logo_png(260), "image/png"),
+    }
+    for unit_key in content.UNIT_TYPES:
+        blobs = assets.plan_sheets(unit_key)
+        for sheet_key, blob in blobs.items():
+            out[f"plan-{unit_key.lower()}-{sheet_key}"] = (blob, "image/jpeg")
+    return out
+
+
+def _image_css(imagery: dict) -> str:
+    """One rule per picture, carrying its bytes and its aspect ratio."""
+    rules = []
+    for key, (blob, mime) in imagery.items():
+        w, h = assets.dimensions(blob)
+        rules.append(f".shot-{key} {{ background-image: "
+                     f"url({assets.data_uri(blob, mime)});"
+                     f" aspect-ratio: {w} / {h}; }}")
+    return "\n".join(rules)
+
+
+def _shot(key: str, label: str, extra: str = "") -> str:
+    """A picture, with the accessible name the reader's language gives it.
+
+    role="img" plus aria-label is what lets one set of embedded bytes
+    carry three different descriptions: the two documents that are hidden
+    are display:none, so a screen reader never reaches their labels.
+    """
+    cls = f"shot shot-{key}" + (f" {extra}" if extra else "")
+    return f'<div class="{cls}" role="img" aria-label="{_esc(label)}"></div>'
+
+
+def _locale_css() -> str:
+    """Show one document; give the Indic ones room to breathe.
+
+    Devanagari and Gujarati hang matras above and below the line, so at
+    the Latin leading they collide. The size nudge is because both
+    scripts carry less of their weight on the x-height and read smaller
+    than the Latin beside them at the same point size.
+    """
+    rules = []
+    for code in copy.LOCALES:
+        rules.append(f"#lang-{code}:checked ~ .doc-{code} "
+                     "{ display: block; }")
+        rules.append(f"#lang-{code}:checked ~ .langbar label[for=lang-{code}]"
+                     " { background: var(--ink); color: #ffffff;"
+                     " border-color: var(--ink); }")
+        rules.append(f"#lang-{code}:focus-visible ~ .langbar "
+                     f"label[for=lang-{code}]"
+                     " { outline: 3px solid var(--terra);"
+                     " outline-offset: 2px; }")
+        if code != "en":
+            rules.append(fonts.face_css(code))
+            rules.append(
+                f".doc-{code} {{ font-family: {fonts.stack(code, 'serif')};"
+                f" line-height: {fonts.LEADING[code]};"
+                f" font-size: {fonts.SCALE[code]}rem; }}")
+            sans = fonts.stack(code, "sans")
+            rules.append(
+                f".doc-{code} .lead, .doc-{code} h1, .doc-{code} h2,"
+                f" .doc-{code} h3, .doc-{code} dt, .doc-{code} th,"
+                f" .doc-{code} .btn, .doc-{code} .bar a,"
+                f" .doc-{code} .plan-tabs label"
+                f" {{ font-family: {sans}; }}")
+        # The plan tabs are a second radio group, one per document, so
+        # their ids cannot collide across the three.
+        for tab in ("a", "b"):
+            rules.append(
+                f"#tab-{tab}-{code}:checked ~ .plan-panes .pane-{tab}"
+                " { display: block; }")
+            rules.append(
+                f"#tab-{tab}-{code}:checked ~ .plan-tabs"
+                f" label[for=tab-{tab}-{code}]"
+                " { background: var(--ink); color: #ffffff;"
+                " border-color: var(--ink); }")
+    return "\n".join(rules)
+
+
+def _schedule_rows(words) -> str:
     return "".join(
-        f"<tr><th scope=\"row\">{_esc(k)}</th><td>{v}</td></tr>" for k, v in rows
+        f'<tr><th scope="row">{_esc(k)}</th><td>{_esc(v)}</td></tr>'
+        for k, v in words.PROJECT_SCHEDULE
     )
 
 
-def _plan_pane(key: str, sheets: list[tuple[str, str]]) -> str:
+def _plan_pane(locale: str, key: str, words) -> str:
     """One tab's drawings and its schedule.
 
-    `sheets` is (caption, data-uri) in the order a visitor walks the house.
     A pane carrying more than one drawing drops the side-by-side grid and
     runs them full width instead: these drawings have their room sizes
     printed inside them, and in a 55%-wide column those figures are too
@@ -401,17 +530,21 @@ def _plan_pane(key: str, sheets: list[tuple[str, str]]) -> str:
     """
     unit = content.UNIT_TYPES[key]
     rows = "".join(
-        f"<tr><th scope=\"row\">{_esc(room)}</th><td>{_esc(dim)}</td></tr>"
-        for room, dim in unit["rooms"]
+        f'<tr><th scope="row">{_esc(room)}</th><td>{_esc(dim)}</td></tr>'
+        for room, dim in content.unit_rooms(unit, words)
     )
-    plots = _esc(unit["plots"].lower())
-    figures = "".join(
-        f'<figure class="plan-sheet"><img src="{uri}" '
-        f'alt="{_esc(caption)} plan for {plots}, with room dimensions">'
-        f"<figcaption>{_esc(caption)}</figcaption></figure>"
-        for caption, uri in sheets
-    )
-    note = f'<p class="plan-note">{_esc(content.PLAN_PAIR_NOTE)}</p>'
+    sheets = unit["sheets"]
+    figures = ""
+    for sheet in sheets:
+        caption = words.SHEET_CAPTIONS[sheet["key"]]
+        label = words.UI["alt_plan_sheet"].format(
+            caption=caption, range=unit["plot_range"])
+        shot_key = f"plan-{key.lower()}-{sheet['key']}"
+        figures += (
+            '<figure class="plan-sheet">'
+            + _shot(shot_key, label)
+            + f"<figcaption>{_esc(caption)}</figcaption></figure>")
+    note = f'<p class="plan-note">{_esc(words.PLAN_PAIR_NOTE)}</p>'
     stacked = " plan-grid-stacked" if len(sheets) > 1 else ""
     return (
         f'<div class="plan-pane pane-{key.lower()}">'
@@ -422,119 +555,112 @@ def _plan_pane(key: str, sheets: list[tuple[str, str]]) -> str:
     )
 
 
-def render_html() -> str:
+PDF_NAMES = {"en": "Lake-Tree-Avenue-eBrochure.pdf",
+             "hi": "Lake-Tree-Avenue-eBrochure-hi.pdf",
+             "gu": "Lake-Tree-Avenue-eBrochure-gu.pdf"}
+
+
+def _document(locale: str, words) -> str:
+    """One language's whole brochure.
+
+    Rendered three times into one file. Only the words differ: the
+    pictures are declared once in CSS and referenced by class.
+    """
     p = content.PROJECT
-    logo_small = assets.data_uri(assets.logo_png(260), "image/png")
-    render = assets.data_uri(assets.render_jpeg(1600), "image/jpeg")
-    layout = assets.data_uri(assets.site_plan_jpeg(1500), "image/jpeg")
-    plan_sheets = {}
-    for key, unit in content.UNIT_TYPES.items():
-        blobs = assets.plan_sheets(key)
-        plan_sheets[key] = [
-            (sheet["caption"],
-             assets.data_uri(blobs[sheet["key"]], "image/jpeg"))
-            for sheet in unit["sheets"]
-        ]
+    s = {sec["id"]: sec for sec in words.SECTIONS}
+    ui = words.UI
+    wa = content.wa_link(words.WHATSAPP_MESSAGE)
+    phone = _esc(p["phone_display"])
+    call = _esc(ui["call"].format(phone=p["phone_display"]))
+    handle = _esc(p["social_handle"])
 
-    s = {sec["id"]: sec for sec in content.SECTIONS}
-    wa = content.wa_link(
-        "Hi, I'd like to know more about Lake Tree Avenue."
-    )
+    def sid(name):
+        return f"{locale}-{name}"
 
-    out = []
-    out.append("<!doctype html><html lang=\"en\"><head>")
-    out.append('<meta charset="utf-8">')
-    out.append('<meta name="viewport" content="width=device-width, initial-scale=1">')
-    out.append("<title>Lake Tree Avenue</title>")
-    out.append(
-        '<meta name="description" content="48 two-bedroom townhouses on '
-        'Waghodia Main Road, Vadodara. A new launch by TAM Developers.">')
-    out.append(f"<style>{CSS}</style></head><body>")
-    out.append(IG_GRADIENT)
+    out = [f'<main class="doc doc-{locale}" lang="{locale}">']
 
     # hero
-    out.append('<header class="hero">')
-    out.append(f'<div class="hero-figure"><img src="{render}" '
-               'alt="Lake Tree Avenue townhouses along the avenue">'
-               "</div>")
+    out.append(f'<header class="hero" id="{sid("cover")}">')
+    out.append('<div class="hero-figure">'
+               + _shot("hero", ui["alt_hero"]) + "</div>")
     out.append('<div class="hero-panel"><div class="wrap">')
     out.append(f"<h1>{_esc(s['cover']['title'])}</h1>")
-    out.append(
-        f'<p class="hero-sub">{_esc(s["cover"]["body"][0])}<br>'
-        f'{_esc(s["cover"]["body"][1])}</p>')
+    out.append(f'<p class="hero-sub">{_esc(s["cover"]["body"][0])}<br>'
+               f'{_esc(s["cover"]["body"][1])}</p>')
     out.append('<div class="actions">')
     out.append(f'<a class="btn" href="{wa}" target="_blank" rel="noopener">'
-               f'{_icon("whatsapp", mono=True)}Enquire on WhatsApp</a>')
+               f'{_icon("whatsapp", mono=True)}{_esc(ui["enquire_whatsapp"])}</a>')
     out.append(f'<a class="btn btn-quiet" href="{content.tel_link()}">'
-               f'{_icon("phone")}Call {_esc(p["phone_display"])}</a>')
-    out.append('<a class="btn btn-quiet" href="#plots">'
-               f'{_icon("sheet")}See the plot map</a>')
+               f'{_icon("phone")}{call}</a>')
+    out.append(f'<a class="btn btn-quiet" href="#{sid("layout")}">'
+               f'{_icon("sheet")}{_esc(ui["see_plot_map"])}</a>')
     out.append("</div></div></div>")
     out.append("</header>")
 
     # the project
-    out.append('<section class="band"><div class="wrap">')
+    out.append(f'<section class="band" id="{sid("project")}"><div class="wrap">')
     out.append('<div class="hd measure">')
     out.append(f"<h2>{_esc(s['project']['title'])}</h2>")
     out.append(f'<p class="lead">{_esc(s["project"]["lead"])}</p></div>')
     out.append('<div class="measure">')
     out.extend(f"<p>{_esc(b)}</p>" for b in s["project"]["body"])
     out.append("</div>")
-    out.append(f'<table class="schedule">{_schedule_rows()}</table>')
+    out.append(f'<table class="schedule">{_schedule_rows(words)}</table>')
     out.append("</div></section>")
 
     # plans
-    out.append('<section id="plans"><div class="wrap">')
+    out.append(f'<section id="{sid("plans")}"><div class="wrap">')
     out.append('<div class="hd measure">')
     out.append(f"<h2>{_esc(s['plans']['title'])}</h2>")
     out.append(f'<p class="lead">{_esc(s["plans"]["lead"])}</p></div>')
     out.append('<div class="plans">')
-    out.append('<input type="radio" name="plan" id="tab-a">')
-    out.append('<input type="radio" name="plan" id="tab-b" checked>')
+    out.append(f'<input type="radio" name="plan-{locale}" id="tab-a-{locale}">')
+    out.append(f'<input type="radio" name="plan-{locale}" id="tab-b-{locale}"'
+               " checked>")
     out.append('<div class="plan-tabs">')
-    out.append(f'<label for="tab-a">{_esc(content.UNIT_TYPES["A"]["plots"])}</label>')
-    out.append(f'<label for="tab-b">{_esc(content.UNIT_TYPES["B"]["plots"])}</label>')
+    for tab, unit_key in (("a", "A"), ("b", "B")):
+        label = content.plots_label(content.UNIT_TYPES[unit_key], words)
+        out.append(f'<label for="tab-{tab}-{locale}">{_esc(label)}</label>')
     out.append("</div>")
     out.append('<div class="plan-panes">')
-    out.append(_plan_pane("A", plan_sheets["A"]))
-    out.append(_plan_pane("B", plan_sheets["B"]))
+    out.append(_plan_pane(locale, "A", words))
+    out.append(_plan_pane(locale, "B", words))
     out.append("</div></div>")
     out.append("</div></section>")
 
     # the drawing sheet
-    out.append('<section class="band" id="plots"><div class="wrap">')
+    out.append(f'<section class="band" id="{sid("layout")}"><div class="wrap">')
     out.append('<div class="hd measure">')
     out.append(f"<h2>{_esc(s['layout']['title'])}</h2>")
     out.append(f'<p class="lead">{_esc(s["layout"]["lead"])}</p></div>')
     out.append('<div class="sheet"><div class="sheet-inner">')
-    out.append('<div class="sheet-title"><b>LAYOUT PLAN</b>'
-               f'<span>{_esc(p["name"])}, Waghodia Main Road, Vadodara</span></div>')
-    out.append(f'<div class="map"><img src="{layout}" '
-               'alt="Site plan showing 48 numbered plots, the internal roads, '
-               'the common plot and the entry gate">')
-    out.append("</div>")
+    out.append(f'<div class="sheet-title"><b>{_esc(ui["layout_plan"])}</b>'
+               f'<span>{_esc(ui["sheet_subtitle"])}</span></div>')
+    out.append('<div class="map">'
+               + _shot("site-plan", ui["alt_site_plan"]) + "</div>")
     out.append(f'<p class="legend"><span>{_esc(s["layout"]["body"][0])}</span>'
-               "<span>Ask us which plots are still open</span></p>")
+               f'<span>{_esc(ui["ask_which_plots"])}</span></p>')
     out.append("</div></div>")
     out.append("</div></section>")
 
     # specifications
-    out.append('<section><div class="wrap">')
+    out.append(f'<section id="{sid("specs")}"><div class="wrap">')
     out.append('<div class="hd measure">')
     out.append(f"<h2>{_esc(s['specs']['title'])}</h2>")
     out.append(f'<p class="lead">{_esc(s["specs"]["lead"])}</p></div>')
     out.append('<dl class="spec-list">')
-    for label, text in content.SPEC_GROUPS:
+    for label, text in words.SPEC_GROUPS:
         out.append(f"<div><dt>{_esc(label)}</dt><dd>{_esc(text)}</dd></div>")
     out.append("</dl>")
-    out.append('<div class="dim"><span>Across the campus</span></div>')
+    out.append(f'<div class="dim"><span>{_esc(ui["across_the_campus"])}</span>'
+               "</div>")
     out.append('<ul class="amenities">')
-    out.extend(f"<li>{_esc(a)}</li>" for a in content.AMENITIES)
+    out.extend(f"<li>{_esc(a)}</li>" for a in words.AMENITIES)
     out.append("</ul>")
     out.append("</div></section>")
 
     # location
-    out.append('<section class="band"><div class="wrap">')
+    out.append(f'<section class="band" id="{sid("location")}"><div class="wrap">')
     out.append('<div class="hd measure">')
     out.append(f"<h2>{_esc(s['location']['title'])}</h2>")
     out.append(f'<p class="lead">{_esc(s["location"]["lead"])}</p></div>')
@@ -543,17 +669,17 @@ def render_html() -> str:
     out.append("</div>")
     rows = "".join(
         f'<tr><th scope="row">{_esc(k)}</th><td>{_esc(v)}</td></tr>'
-        for k, v in content.LOCATION_ROWS)
+        for k, v in words.LOCATION_ROWS)
     out.append(f'<table class="schedule">{rows}</table>')
     out.append('<div class="actions" style="margin-top:30px">')
     out.append(f'<a class="btn btn-quiet" href="{p["maps_url"]}" '
                f'target="_blank" rel="noopener">{_icon("pin")}'
-               f'{_esc(p["site_address"])}</a>')
+               f'{_esc(words.ADDRESS)}</a>')
     out.append("</div>")
     out.append("</div></section>")
 
     # contact
-    out.append('<section><div class="wrap">')
+    out.append(f'<section id="{sid("contact")}"><div class="wrap">')
     out.append('<div class="hd measure">')
     out.append(f"<h2>{_esc(s['contact']['title'])}</h2>")
     out.append(f'<p class="lead">{_esc(s["contact"]["lead"])}</p></div>')
@@ -562,59 +688,109 @@ def render_html() -> str:
     out.append("</div>")
     out.append('<div class="contact-grid">')
     out.append(
-        f'<div><h3>Call or message</h3><p>'
+        f'<div><h3>{_esc(ui["call_or_message"])}</h3><p>'
         f'<a class="with-ico" href="{content.tel_link()}">{_icon("phone", 18)}'
-        f'{_esc(p["phone_display"])}</a><br>'
+        f'{phone}</a><br>'
         f'<a class="with-ico" data-cta="whatsapp" href="{wa}" '
         f'target="_blank" rel="noopener">{_icon("whatsapp", 18)}'
-        f'WhatsApp {_esc(p["phone_display"])}</a><br>'
+        f'{_esc(ui["whatsapp"].format(phone=p["phone_display"]))}</a><br>'
         f'<a class="with-ico" href="{content.mail_link()}">{_icon("mail", 18)}'
         f'{_esc(p["email"])}</a></p></div>')
-    out.append(f'<div><h3>Site</h3><p><a class="with-ico" '
+    out.append(f'<div><h3>{_esc(ui["site"])}</h3><p><a class="with-ico" '
                f'href="{p["maps_url"]}" target="_blank" rel="noopener">'
-               f'{_icon("pin", 18)}{_esc(p["site_address"])}</a></p></div>')
-    out.append(f'<div><h3>Developer</h3>'
-               f'<p>{_esc(content.CREDIT)}<br>{_esc(p["regd_office"])}</p></div>')
-    handle = _esc(p["social_handle"])
+               f'{_icon("pin", 18)}{_esc(words.ADDRESS)}</a></p></div>')
+    out.append(f'<div><h3>{_esc(ui["developer"])}</h3>'
+               f'<p>{_esc(words.CREDIT)}<br>{_esc(words.REGD_OFFICE)}</p></div>')
     out.append(
-        f'<div><h3>Follow</h3><p>{handle} on Instagram and Facebook</p>'
+        f'<div><h3>{_esc(ui["follow"])}</h3>'
+        f'<p>{_esc(ui["follow_line"].format(handle=p["social_handle"]))}</p>'
         f'<div class="chips">'
         f'<a class="chip" href="{p["instagram_url"]}" target="_blank" '
-        f'rel="noopener" aria-label="Instagram {handle}">'
+        f'rel="noopener" aria-label='
+        f'"{_esc(ui["aria_instagram"].format(handle=p["social_handle"]))}">'
         f'{_icon("instagram", 24)}</a>'
         f'<a class="chip" href="{p["facebook_url"]}" target="_blank" '
-        f'rel="noopener" aria-label="Facebook {handle}">'
+        f'rel="noopener" aria-label='
+        f'"{_esc(ui["aria_facebook"].format(handle=p["social_handle"]))}">'
         f'{_icon("facebook", 24)}</a>'
         f'<a class="chip" href="{wa}" target="_blank" rel="noopener" '
-        f'aria-label="WhatsApp {_esc(p["phone_display"])}">'
+        f'aria-label="{_esc(ui["whatsapp"].format(phone=p["phone_display"]))}">'
         f'{_icon("whatsapp", 24)}</a>'
         f'<a class="chip" href="{content.tel_link()}" '
-        f'aria-label="Call {_esc(p["phone_display"])}">'
+        f'aria-label="{call}">'
         f'{_icon("phone", 24)}</a>'
         f"</div></div>")
     out.append("</div>")
     out.append('<div class="actions" style="margin-top:34px">')
     out.append(f'<a class="btn" href="{wa}" target="_blank" rel="noopener">'
-               f'{_icon("whatsapp", mono=True)}Enquire on WhatsApp</a>')
+               f'{_icon("whatsapp", mono=True)}{_esc(ui["enquire_whatsapp"])}</a>')
     out.append(f'<a class="btn btn-quiet" href="{content.tel_link()}">'
-               f'{_icon("phone")}Call {_esc(p["phone_display"])}</a>')
+               f'{_icon("phone")}{call}</a>')
+    # The PDF a reader downloads is the one in the language they are
+    # reading. A toggle that switched the page but handed out an English
+    # PDF would undo itself at the last step.
+    out.append(f'<a class="btn btn-quiet" href="{PDF_NAMES[locale]}" '
+               f'download>{_icon("sheet")}{_esc(ui["download_pdf"])}</a>')
     out.append("</div>")
     out.append("</div></section>")
 
     # footer
     out.append('<footer><div class="wrap">')
-    out.append(f'<img src="{logo_small}" alt="Lake Tree Avenue">')
-    out.append(f"<p>{_esc(content.CREDIT)}<br>{_esc(p['regd_office'])}</p>")
+    out.append(_shot("logo", ui["alt_logo"]))
+    out.append(f"<p>{_esc(words.CREDIT)}<br>{_esc(words.REGD_OFFICE)}</p>")
     out.append("</div></footer>")
 
     # sticky bar
-    out.append('<nav class="bar" aria-label="Contact">')
-    out.append(f'<a href="{content.tel_link()}">{_icon("phone", 22)}Call</a>')
+    out.append(f'<nav class="bar" aria-label="{_esc(ui["bar_label"])}">')
+    out.append(f'<a href="{content.tel_link()}">{_icon("phone", 22)}'
+               f'{_esc(ui["bar_call"])}</a>')
     out.append(f'<a href="{wa}" target="_blank" rel="noopener">'
-               f'{_icon("whatsapp", 22)}WhatsApp</a>')
+               f'{_icon("whatsapp", 22)}{_esc(ui["bar_whatsapp"])}</a>')
     out.append(f'<a href="{p["maps_url"]}" target="_blank" rel="noopener">'
-               f'{_icon("pin", 22)}Directions</a>')
+               f'{_icon("pin", 22)}{_esc(ui["bar_directions"])}</a>')
     out.append("</nav>")
+
+    out.append("</main>")
+    return "".join(out)
+
+
+def doc(markup: str, locale: str) -> str:
+    """One language's subtree, for tests that read the page per language."""
+    after = markup.split(f'<main class="doc doc-{locale}"', 1)[1]
+    return after.split("</main>", 1)[0]
+
+
+def render_html() -> str:
+    imagery = _imagery()
+    default = copy.for_locale(copy.DEFAULT)
+
+    out = ['<!doctype html><html lang="en"><head>']
+    out.append('<meta charset="utf-8">')
+    out.append('<meta name="viewport" content="width=device-width, '
+               'initial-scale=1">')
+    out.append("<title>Lake Tree Avenue</title>")
+    out.append('<meta name="description" content="'
+               + _esc(default.META_DESCRIPTION) + '">')
+    out.append(f"<style>{CSS}\n{_image_css(imagery)}\n{_locale_css()}</style>")
+    out.append("</head><body>")
+    out.append(IG_GRADIENT)
+
+    # The radios come before every document so one ~ combinator reaches
+    # all three. Checked state is the default language.
+    for code in copy.LOCALES:
+        checked = " checked" if code == copy.DEFAULT else ""
+        out.append(f'<input class="lang-radio" type="radio" name="lang" '
+                   f'id="lang-{code}"{checked}>')
+    names = default.LANGUAGE_NAMES
+    out.append(f'<nav class="langbar" aria-label='
+               f'"{_esc(default.UI["aria_language"])}">')
+    for code in copy.LOCALES:
+        out.append(f'<label for="lang-{code}" lang="{code}">'
+                   f"{_esc(names[code])}</label>")
+    out.append("</nav>")
+
+    for code in copy.LOCALES:
+        out.append(_document(code, copy.for_locale(code)))
 
     out.append("</body></html>")
     return "".join(out)

@@ -1,6 +1,6 @@
 import re
 import unittest
-from build import build_html, content
+from build import build_html, content, copy, fonts
 
 RULE = re.compile(r"([^{}]+)\{([^}]*)\}")
 BACKGROUND = re.compile(r"background[^;:]*:\s*#([0-9a-fA-F]{6})")
@@ -44,10 +44,17 @@ class TestHtml(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.html = build_html.render_html()
-        # Base64 payloads are image bytes, not copy. Scanning them for words
-        # finds "rera" and "Rs6" inside a JPEG and fails on nothing.
-        cls.markup = re.sub(r"data:[a-z/+-]+;base64,[A-Za-z0-9+/=]+", "DATA",
-                            cls.html)
+        # Base64 payloads are image and font bytes, not copy. Scanning
+        # them for words finds "rera" and "Rs6" inside a JPEG and fails on
+        # nothing. The media type may carry a digit -- font/woff2 -- and a
+        # class that forgot that let 600 KB of font through as if it were
+        # prose.
+        cls.markup = re.sub(r"data:[a-z0-9/+.-]+;base64,[A-Za-z0-9+/=]+",
+                            "DATA", cls.html)
+
+    def doc(self, locale):
+        """One language's subtree, with the base64 already stripped."""
+        return build_html.doc(self.markup, locale)
 
     def test_has_title_and_viewport(self):
         self.assertIn("<title>Lake Tree Avenue</title>", self.html)
@@ -58,6 +65,8 @@ class TestHtml(unittest.TestCase):
             url = m.group(1)
             if url.startswith(("#", "data:", "tel:", "mailto:")):
                 continue
+            if url in build_html.PDF_NAMES.values():
+                continue  # the brochure's own PDF, served beside it
             self.assertTrue(
                 url.startswith("https://wa.me/")
                 or url.startswith("https://www.google.com/maps/")
@@ -153,10 +162,12 @@ class TestHtml(unittest.TestCase):
         self.assertEqual(_declaration(css, ".btn-quiet", "background"), "#ffffff")
 
     def test_every_button_pairs_a_glyph_with_words(self):
-        # A glyph alone is a guess; the words are what make it a CTA.
+        # A glyph alone is a guess; the words are what make it a CTA. In
+        # Hindi and Gujarati those words carry no Latin letters, so the
+        # check is for a word, not for an English one.
         for tag in re.findall(r'<a class="btn[^>]*>.*?</a>', self.markup):
             self.assertIn("<svg", tag, tag)
-            self.assertRegex(re.sub(r"<[^>]+>", "", tag).strip(), r"[A-Za-z]")
+            self.assertRegex(re.sub(r"<[^>]+>", "", tag).strip(), r"\w")
 
     def test_social_chips_use_each_network_own_mark(self):
         # Original artwork, not a monochrome house glyph: Instagram's
@@ -175,7 +186,11 @@ class TestHtml(unittest.TestCase):
             )
 
     def test_chips_offer_whatsapp_and_click_to_call(self):
-        chips = re.findall(r'<a class="chip"[^>]*>', self.markup)
+        for locale in copy.LOCALES:
+            self._check_chips(self.doc(locale))
+
+    def _check_chips(self, markup):
+        chips = re.findall(r'<a class="chip"[^>]*>', markup)
         self.assertEqual(len(chips), 4, chips)
         self.assertTrue(any(content.tel_link() in c for c in chips), chips)
         self.assertTrue(any("wa.me" in c for c in chips), chips)
@@ -190,79 +205,199 @@ class TestHtml(unittest.TestCase):
             self.assertIn('focusable="false"', svg, svg)
 
     def test_sticky_bar_is_three_labelled_icons(self):
-        bar = self.markup.split('<nav class="bar"')[1].split("</nav>")[0]
-        self.assertEqual(bar.count("<svg"), 3, bar)
-        for word in ("Call", "WhatsApp", "Directions"):
-            self.assertIn(f">{word}</a>", bar)
+        for locale in copy.LOCALES:
+            words = copy.for_locale(locale)
+            bar = self.doc(locale).split('<nav class="bar"')[1].split("</nav>")[0]
+            self.assertEqual(bar.count("<svg"), 3, bar)
+            for key in ("bar_call", "bar_whatsapp", "bar_directions"):
+                self.assertIn(f">{words.UI[key]}</a>", bar, locale)
         self.assertIn("env(safe-area-inset-bottom", build_html.CSS)
 
     def test_plan_toggle_is_css_only_and_symmetric(self):
         # The toggle must work with scripting unavailable, so it is radio
-        # inputs plus sibling selectors. Both directions must be wired.
-        self.assertIn('id="tab-a"', self.markup)
-        self.assertIn('id="tab-b"', self.markup)
-        self.assertEqual(self.markup.count(' checked>'), 1,
-                         "exactly one plan tab starts selected")
-        self.assertIn("#tab-a:checked ~ .plan-panes .pane-a { display: block; }",
-                      self.markup)
-        self.assertIn("#tab-b:checked ~ .plan-panes .pane-b { display: block; }",
-                      self.markup)
-        self.assertIn('class="plan-pane pane-a"', self.markup)
-        self.assertIn('class="plan-pane pane-b"', self.markup)
-        for label in ("tab-a", "tab-b"):
-            self.assertIn(f'<label for="{label}"', self.markup)
+        # inputs plus sibling selectors. Both directions must be wired,
+        # and each document owns its own radio group -- three documents
+        # sharing one group would move all three at once.
+        for locale in copy.LOCALES:
+            doc = self.doc(locale)
+            for tab in ("a", "b"):
+                self.assertIn(f'id="tab-{tab}-{locale}"', doc)
+                self.assertIn(f'<label for="tab-{tab}-{locale}"', doc)
+                self.assertIn(
+                    f"#tab-{tab}-{locale}:checked ~ .plan-panes .pane-{tab}"
+                    " { display: block; }", self.markup)
+                self.assertIn(f'class="plan-pane pane-{tab}"', doc)
+            self.assertEqual(doc.count(" checked>"), 1,
+                             f"{locale}: exactly one plan tab starts selected")
 
-    def _pane(self, key):
+    def _pane(self, key, locale="en"):
         """The markup of one plan tab, bounded by the next pane or section."""
-        after = self.markup.split(f'class="plan-pane pane-{key}"')[1]
+        after = self.doc(locale).split(f'class="plan-pane pane-{key}"')[1]
         for boundary in ('class="plan-pane', '<section'):
             after = after.split(boundary)[0]
         return after
 
     def test_both_panes_show_ground_floor_then_first_floor(self):
-        for key in ("a", "b"):
-            pane = self._pane(key)
-            self.assertEqual(pane.count('class="plan-sheet"'), 2,
-                             f"pane {key}: expected a ground and a first floor")
-            self.assertIn("Ground floor", pane)
-            self.assertIn("First floor", pane)
-            self.assertLess(pane.index("Ground floor"),
-                            pane.index("First floor"),
-                            f"pane {key} puts the first floor first")
+        for locale in copy.LOCALES:
+            captions = copy.for_locale(locale).SHEET_CAPTIONS
+            for key in ("a", "b"):
+                pane = self._pane(key, locale)
+                self.assertEqual(
+                    pane.count('class="plan-sheet"'), 2,
+                    f"{locale} pane {key}: expected a ground and a first floor")
+                self.assertIn(captions["ground"], pane)
+                self.assertIn(captions["first"], pane)
+                self.assertLess(pane.index(captions["ground"]),
+                                pane.index(captions["first"]),
+                                f"{locale} pane {key} puts the first floor first")
 
     def test_each_pane_says_it_draws_two_adjacent_homes(self):
-        for key in ("a", "b"):
-            self.assertIn(content.PLAN_PAIR_NOTE, self._pane(key),
-                          f"pane {key} does not say the sheet shows a pair")
+        for locale in copy.LOCALES:
+            note = copy.for_locale(locale).PLAN_PAIR_NOTE
+            for key in ("a", "b"):
+                self.assertIn(note, self._pane(key, locale),
+                              f"{locale} pane {key} does not say it shows a pair")
 
     def test_each_pane_names_its_own_plots_in_its_alt_text(self):
-        for key, plots in (("a", "plots 01–06"), ("b", "plots 07–48")):
-            alts = re.findall(r'alt="([^"]+)"', self._pane(key))
-            self.assertEqual(len(alts), 2, f"pane {key}")
-            for alt in alts:
-                self.assertIn(plots, alt, f"pane {key} alt text: {alt!r}")
+        # The pictures are CSS backgrounds, so the accessible name is an
+        # aria-label. Every language gets its own; the plot numbers do not
+        # move between them.
+        for locale in copy.LOCALES:
+            for key, plots in (("a", "01–06"), ("b", "07–48")):
+                alts = re.findall(r'aria-label="([^"]+)"', self._pane(key, locale))
+                self.assertEqual(len(alts), 2, f"{locale} pane {key}")
+                for alt in alts:
+                    self.assertIn(plots, alt, f"{locale} pane {key}: {alt!r}")
 
     def test_each_plan_sheet_has_its_own_alt_text(self):
-        # Two sheets sharing one alt text tells a screen reader nothing
-        # about which floor it is on.
-        for key in ("a", "b"):
-            alts = re.findall(r'alt="([^"]+)"', self._pane(key))
-            self.assertEqual(len(set(alts)), 2,
-                             f"pane {key} duplicate alt text: {alts}")
-            self.assertTrue(any("ground floor" in a.lower() for a in alts), alts)
-            self.assertTrue(any("first floor" in a.lower() for a in alts), alts)
+        # Two sheets sharing one accessible name tells a screen reader
+        # nothing about which floor it is on.
+        for locale in copy.LOCALES:
+            captions = copy.for_locale(locale).SHEET_CAPTIONS
+            for key in ("a", "b"):
+                alts = re.findall(r'aria-label="([^"]+)"', self._pane(key, locale))
+                self.assertEqual(len(set(alts)), 2,
+                                 f"{locale} pane {key} duplicate name: {alts}")
+                for floor in ("ground", "first"):
+                    self.assertTrue(
+                        any(captions[floor] in a for a in alts),
+                        f"{locale} pane {key} never names the {floor} floor")
 
     def test_no_pane_reuses_another_pane_drawing(self):
-        # Both panes carry two sheets now. A copy-paste that pointed Type B
-        # at Type A's drawings would still render and still look right.
-        srcs = re.findall(r'<img src="(data:[^"]+)"', self.html)
-        plans = [u for u in srcs if len(u) > 100_000]
+        # Both panes carry two sheets. A copy-paste that pointed Type B at
+        # Type A's drawings would still render and still look right.
+        urls = re.findall(r"background-image: url\((data:[^)]+)\)", self.html)
+        plans = [u for u in urls if len(u) > 100_000]
         self.assertGreaterEqual(len(plans), 4)
         self.assertEqual(len(plans), len(set(plans)), "a drawing is reused")
 
     def test_both_tab_labels_survive_unchanged(self):
-        self.assertIn(">Plots 01–06<", self.markup)
-        self.assertIn(">Plots 07–48<", self.markup)
+        for locale in copy.LOCALES:
+            words = copy.for_locale(locale)
+            doc = self.doc(locale)
+            for unit_key in ("A", "B"):
+                label = content.plots_label(content.UNIT_TYPES[unit_key], words)
+                self.assertIn(f">{label}<", doc, locale)
+
+    def test_under_size_budget(self):
+        self.assertLess(len(self.html.encode("utf-8")), 6 * 1024 * 1024)
+
+
+class TestLanguageToggle(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.html = build_html.render_html()
+        cls.markup = re.sub(r"data:[a-z0-9/+.-]+;base64,[A-Za-z0-9+/=]+",
+                            "DATA", cls.html)
+
+    def test_every_language_renders_a_complete_document(self):
+        for code in copy.LOCALES:
+            doc = build_html.doc(self.markup, code)
+            for section in content.SECTION_IDS:
+                self.assertIn(f'id="{code}-{section}"', doc,
+                              f"{code} is missing the {section} section")
+
+    def test_exactly_one_document_is_visible_per_choice(self):
+        # A broken selector either stacks all three languages on top of
+        # each other or hides every one of them and ships a blank page.
+        self.assertIn(".doc { display: none; }", self.html)
+        for code in copy.LOCALES:
+            self.assertIn(f"#lang-{code}:checked ~ .doc-{code}"
+                          " { display: block; }", self.html, code)
+
+    def test_english_is_the_one_language_selected_on_open(self):
+        radios = re.findall(
+            r'<input class="lang-radio" type="radio" name="lang" '
+            r'id="lang-(\w+)"([^>]*)>', self.markup)
+        self.assertEqual([c for c, _ in radios], list(copy.LOCALES))
+        self.assertEqual([c for c, attrs in radios if "checked" in attrs],
+                         [copy.DEFAULT])
+
+    def test_the_radios_precede_every_document(self):
+        # The show/hide rules are plain sibling combinators, so a radio
+        # that came after a document would never reach it.
+        last_radio = self.markup.rindex('class="lang-radio"')
+        self.assertLess(last_radio, self.markup.index('class="doc '))
+
+    def test_the_toggle_needs_no_javascript(self):
+        # The page is opened from file:// after a WhatsApp forward.
+        self.assertNotIn("<script", self.html)
+        self.assertNotIn("onclick", self.html)
+
+    def test_the_pills_name_each_language_in_its_own_script(self):
+        names = copy.for_locale("en").LANGUAGE_NAMES
+        for code in copy.LOCALES:
+            self.assertIn(f'<label for="lang-{code}" lang="{code}">'
+                          f"{names[code]}</label>", self.markup)
+
+    def test_each_language_offers_its_own_pdf(self):
+        # A toggle that switched the page but handed out an English PDF
+        # would undo itself at the last step.
+        for code in copy.LOCALES:
+            doc = build_html.doc(self.markup, code)
+            self.assertIn(f'href="{build_html.PDF_NAMES[code]}" download',
+                          doc, code)
+            for other in copy.LOCALES:
+                if other != code:
+                    self.assertNotIn(f'href="{build_html.PDF_NAMES[other]}"',
+                                     doc, f"{code} offers the {other} PDF")
+
+    def test_each_document_declares_its_language(self):
+        for code in copy.LOCALES:
+            self.assertIn(f'<main class="doc doc-{code}" lang="{code}">',
+                          self.markup)
+
+    def test_the_indic_documents_embed_their_own_face(self):
+        for code in ("hi", "gu"):
+            self.assertIn(f".doc-{code} {{ font-family: 'Noto Serif",
+                          self.html, code)
+        self.assertNotIn(".doc-en { font-family:", self.html)
+
+    def test_indic_text_is_given_more_room_than_the_latin(self):
+        for code in ("hi", "gu"):
+            self.assertIn(f"line-height: {fonts.LEADING[code]}", self.html)
+
+    def test_no_font_is_fetched_from_the_network(self):
+        self.assertNotIn("fonts.googleapis.com", self.html)
+        self.assertNotIn("fonts.gstatic.com", self.html)
+
+    def test_image_bytes_appear_once_not_once_per_language(self):
+        # Three documents sharing one set of pictures is the whole reason
+        # the images are CSS backgrounds. An <img> per document would be
+        # 8.7 MB where 2.9 MB does.
+        uris = re.findall(r"data:image/[a-z]+;base64,[A-Za-z0-9+/=]{200,}",
+                          self.html)
+        self.assertTrue(uris)
+        self.assertEqual(len(uris), len(set(uris)),
+                         "a picture is embedded more than once")
+
+    def test_every_picture_declares_its_aspect_ratio(self):
+        # A background box has no intrinsic size; without this the page
+        # reflows under the reader as the pictures paint.
+        rules = re.findall(r"\.shot-[a-z0-9-]+ \{([^}]*)\}", self.html)
+        self.assertGreaterEqual(len(rules), 7)
+        for rule in rules:
+            self.assertIn("aspect-ratio:", rule)
 
     def test_under_size_budget(self):
         self.assertLess(len(self.html.encode("utf-8")), 6 * 1024 * 1024)
