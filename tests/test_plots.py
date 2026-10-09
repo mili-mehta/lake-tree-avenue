@@ -66,5 +66,38 @@ class TestHotspots(unittest.TestCase):
             self.assertTrue(s.y <= cy / ph <= s.y + s.h, f"plot {n} label outside y")
 
 
+class TestSubFrame(unittest.TestCase):
+    """The plot map reads better cropped to the site plan, which means the
+    hotspots have to be remapped into that tighter frame."""
+
+    def test_site_box_is_a_sane_sub_rectangle(self):
+        x0, y0, x1, y1 = plots.SITE_BOX
+        self.assertTrue(0.0 <= x0 < x1 <= 1.0)
+        self.assertTrue(0.0 <= y0 < y1 <= 1.0)
+
+    def test_hotspots_remapped_into_the_site_box_stay_inside_it(self):
+        for s in plots.hotspots(plots.SITE_BOX):
+            self.assertGreaterEqual(s.x, 0.0, f"plot {s.number}")
+            self.assertGreaterEqual(s.y, 0.0, f"plot {s.number}")
+            self.assertLessEqual(s.x + s.w, 1.0, f"plot {s.number}")
+            self.assertLessEqual(s.y + s.h, 1.0, f"plot {s.number}")
+
+    def test_site_box_contains_every_plot_without_clipping(self):
+        full = {s.number: s for s in plots.hotspots()}
+        sub = {s.number: s for s in plots.hotspots(plots.SITE_BOX)}
+        x0, y0, x1, y1 = plots.SITE_BOX
+        sx, sy = x1 - x0, y1 - y0
+        for n, f in full.items():
+            # area must scale by exactly the frame ratio: nothing was clamped
+            self.assertAlmostEqual(sub[n].w, f.w / sx, places=6, msg=f"plot {n}")
+            self.assertAlmostEqual(sub[n].h, f.h / sy, places=6, msg=f"plot {n}")
+
+    def test_remapping_enlarges_each_plot_within_its_frame(self):
+        full = plots.hotspots()
+        sub = plots.hotspots(plots.SITE_BOX)
+        self.assertGreater(sub[0].h, full[0].h)
+        self.assertEqual(len(sub), 48)
+
+
 if __name__ == "__main__":
     unittest.main()

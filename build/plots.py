@@ -33,6 +33,12 @@ MANUAL_CENTRES = {
 # Hotspot box drawn around a label centre, in PDF points.
 # Plots 01-06 are a vertical column of wide, short cells; the rest are rows of
 # narrow, tall cells.
+# The drawing sheet carries the site plan in its upper two thirds and a strip
+# of floor plans and elevations below. The brochure shows those drawings in
+# their own section, so the plot map crops to the site plan alone — fractions
+# of the rendered page.
+SITE_BOX = (0.020, 0.055, 0.980, 0.775)
+
 _COLUMN_PLOTS = range(1, 7)
 _COLUMN_BOX = (118.0, 82.0)   # w, h
 _ROW_BOX = (84.0, 150.0)      # w, h
@@ -70,7 +76,13 @@ def extract_label_centres(pdf_path: str) -> dict[int, tuple[float, float]]:
     return centres
 
 
-def hotspots() -> tuple[Hotspot, ...]:
+def hotspots(box: tuple[float, float, float, float] | None = None
+             ) -> tuple[Hotspot, ...]:
+    """Hotspots normalised to the page, or to `box` within it.
+
+    `box` is (x0, y0, x1, y1) in page fractions — pass the same crop used for
+    the image so overlay and raster share a frame.
+    """
     page = fitz.open(LAYOUT_PDF)[0]
     pw, ph = page.rect.width, page.rect.height
 
@@ -83,12 +95,18 @@ def hotspots() -> tuple[Hotspot, ...]:
         bw, bh = _COLUMN_BOX if number in _COLUMN_PLOTS else _ROW_BOX
         x = max(0.0, (cx - bw / 2) / pw)
         y = max(0.0, (cy - bh / 2) / ph)
+        w = min(bw / pw, 1.0 - x)
+        h = min(bh / ph, 1.0 - y)
+        if box is not None:
+            bx0, by0, bx1, by1 = box
+            sx, sy = bx1 - bx0, by1 - by0
+            x, y, w, h = (x - bx0) / sx, (y - by0) / sy, w / sx, h / sy
         out.append(Hotspot(
             number=number,
             x=x,
             y=y,
-            w=min(bw / pw, 1.0 - x),
-            h=min(bh / ph, 1.0 - y),
+            w=w,
+            h=h,
             unit_type="A" if number in _COLUMN_PLOTS else "B",
         ))
     return tuple(out)

@@ -1,0 +1,76 @@
+import re
+import unittest
+from build import build_html, content, plots
+
+
+class TestHtml(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.html = build_html.render_html()
+        # Base64 payloads are image bytes, not copy. Scanning them for words
+        # finds "rera" and "Rs6" inside a JPEG and fails on nothing.
+        cls.markup = re.sub(r"data:[a-z/+-]+;base64,[A-Za-z0-9+/=]+", "DATA",
+                            cls.html)
+
+    def test_has_title_and_viewport(self):
+        self.assertIn("<title>Lake Tree Avenue</title>", self.html)
+        self.assertIn('name="viewport"', self.html)
+
+    def test_no_external_subresources(self):
+        for m in re.finditer(r'(?:src|href)\s*=\s*"([^"]+)"', self.html):
+            url = m.group(1)
+            if url.startswith(("#", "data:", "tel:", "mailto:")):
+                continue
+            self.assertTrue(
+                url.startswith("https://wa.me/")
+                or url.startswith("https://www.google.com/maps/"),
+                f"external subresource: {url}",
+            )
+
+    def test_no_dynamic_fetch_apis(self):
+        for banned in ("fetch(", "XMLHttpRequest", "serviceWorker",
+                       'type="module"', "import("):
+            self.assertNotIn(banned, self.html, f"file:// hostile API: {banned}")
+
+    def test_all_forty_eight_plot_links_present(self):
+        for n in range(1, 49):
+            self.assertIn(content.plot_wa_link(n), self.html, f"plot {n} link missing")
+
+    def test_hotspot_rect_count_matches_plot_count(self):
+        self.assertEqual(len(re.findall(r"<rect[^>]*class=\"plot\"", self.html)),
+                         len(plots.hotspots()))
+
+    def test_primary_ctas_present(self):
+        self.assertIn(content.tel_link(), self.html)
+        self.assertIn(content.mail_link(), self.html)
+        self.assertIn(content.PROJECT["maps_url"], self.html)
+
+    def test_phone_readable_as_text_not_only_as_link(self):
+        self.assertIn(content.PROJECT["phone_display"], self.html)
+
+    def test_no_forbidden_terms(self):
+        low = self.markup.lower()
+        for term in content.FORBIDDEN:
+            self.assertNotIn(term.lower(), low, f"forbidden term: {term}")
+
+    def test_no_price(self):
+        self.assertIsNone(re.search(r"(₹|Rs\.?\s*\d)", self.markup))
+        self.assertIn("Price on call", self.html)
+
+    def test_light_only_with_explicit_body_background(self):
+        self.assertIn("color-scheme: light", self.html)
+        self.assertNotIn("prefers-color-scheme: dark", self.html)
+        self.assertRegex(self.html, r"body\s*\{[^}]*background")
+
+    def test_no_dark_page_ground(self):
+        for hexcode in re.findall(r"background[^;:]*:\s*#([0-9a-fA-F]{6})", self.html):
+            r, g, b = (int(hexcode[i:i + 2], 16) for i in (0, 2, 4))
+            luma = 0.2126 * r + 0.7152 * g + 0.0722 * b
+            self.assertGreater(luma, 120, f"dark background #{hexcode}")
+
+    def test_under_size_budget(self):
+        self.assertLess(len(self.html.encode("utf-8")), 6 * 1024 * 1024)
+
+
+if __name__ == "__main__":
+    unittest.main()

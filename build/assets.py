@@ -84,8 +84,14 @@ def _layout_pixmap(width: int) -> Image.Image:
     return Image.frombytes("RGB", (pm.width, pm.height), pm.samples)
 
 
-def layout_png(width: int = 1600) -> bytes:
-    return _encode(_layout_pixmap(width), "PNG", optimize=True)
+def layout_png(width: int = 1600, box=None) -> bytes:
+    """Render the layout page, optionally cropped to `box` (page fractions)."""
+    img = _layout_pixmap(width if box is None else round(width / (box[2] - box[0])))
+    if box is not None:
+        w, h = img.size
+        img = img.crop((round(box[0] * w), round(box[1] * h),
+                        round(box[2] * w), round(box[3] * h)))
+    return _encode(img, "PNG", optimize=True)
 
 
 def plan_crops(width: int = 2400, quality: int = 82) -> dict[str, bytes]:

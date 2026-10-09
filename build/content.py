@@ -126,10 +126,11 @@ SECTIONS = (
     },
     {
         "id": "render",
-        "title": "A street, not a block",
-        "lead": "Brick, stone and glass — repeated down a lit avenue.",
-        "body": ("Each home stands on its own plot with a planted forecourt, "
-                 "a standing balcony above the entrance and a full-width terrace.",),
+        "title": "What the front gives away",
+        "lead": "Front and rear elevation, drawn to scale.",
+        "body": ("Exposed brick across the front, a standing balcony over the "
+                 "entrance, and the terrace parapet carried through as a line "
+                 "rather than a wall.",),
     },
     {
         "id": "plans",
@@ -154,9 +155,9 @@ SECTIONS = (
     {
         "id": "location",
         "title": "Waghodia Main Road",
-        "lead": "Next to Spunpipe & Construction Co., Kamlapura, Vadodara.",
-        "body": ("On the main Waghodia road, on Vadodara's eastern growth "
-                 "corridor toward Halol.",),
+        "lead": "On Vadodara's eastern growth corridor, toward Halol.",
+        "body": ("The gate opens onto the main Waghodia road, so there is no "
+                 "approach lane to negotiate and no last-mile detour.",),
     },
     {
         "id": "contact",

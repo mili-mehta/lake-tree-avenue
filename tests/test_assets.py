@@ -1,7 +1,7 @@
 import io
 import unittest
 from PIL import Image
-from build import assets
+from build import assets, plots
 
 
 def _open(blob):
@@ -46,6 +46,13 @@ class TestLayout(unittest.TestCase):
         img = _open(assets.layout_png(width=1600))
         self.assertEqual(img.width, 1600)
         self.assertAlmostEqual(img.height / img.width, 2384 / 1684, places=2)
+
+    def test_layout_can_crop_to_the_site_plan(self):
+        full = _open(assets.layout_png(width=1200))
+        site = _open(assets.layout_png(width=1200, box=plots.SITE_BOX))
+        self.assertEqual(site.width, 1200)
+        # the site plan is wider relative to its height than the whole sheet
+        self.assertLess(site.height / site.width, full.height / full.width)
 
     def test_layout_under_budget(self):
         self.assertLess(len(assets.layout_png()), 2_500_000)
