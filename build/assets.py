@@ -61,11 +61,30 @@ def _trim_white(img: Image.Image) -> Image.Image:
 
 
 def logo_png(height: int = 420) -> bytes:
+    """Trimmed logo on a transparent ground.
+
+    The source art is drawn on white. Both artefacts place the logo on sand,
+    where a white plate would read as a pasted sticker, so near-white pixels
+    become transparent and the artwork keeps its own edges.
+    """
     img = Image.open(LOGO_SRC).convert("RGB")
     img = _trim_white(img)
     ratio = height / img.height
     img = img.resize((max(1, round(img.width * ratio)), height), Image.LANCZOS)
-    return _encode(img, "PNG", optimize=True)
+
+    rgba = img.convert("RGBA")
+    px = rgba.load()
+    w, h = rgba.size
+    for y in range(h):
+        for x in range(w):
+            r, g, b, _ = px[x, y]
+            lightest = max(r, g, b)
+            if lightest > _WHITE:
+                px[x, y] = (r, g, b, 0)
+            elif lightest > 215:
+                # feather the antialiased rim instead of leaving a hard edge
+                px[x, y] = (r, g, b, round(255 * (_WHITE - lightest) / 32))
+    return _encode(rgba, "PNG", optimize=True)
 
 
 def render_jpeg(width: int = 1600, quality: int = 78) -> bytes:

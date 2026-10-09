@@ -14,6 +14,18 @@ class TestLogo(unittest.TestCase):
         self.assertEqual(img.format, "PNG")
         self.assertEqual(img.height, 420)
 
+    def test_logo_background_is_transparent(self):
+        # The logo sits on sand in both artefacts; a white plate around it
+        # reads as a pasted sticker.
+        img = _open(assets.logo_png(height=300))
+        self.assertEqual(img.mode, "RGBA")
+        self.assertEqual(img.getpixel((0, 0))[3], 0)
+
+    def test_logo_keeps_its_artwork_opaque(self):
+        img = _open(assets.logo_png(height=300)).convert("RGBA")
+        alphas = img.getchannel("A").getdata()
+        self.assertGreater(max(alphas), 250)
+
     def test_logo_under_budget(self):
         self.assertLess(len(assets.logo_png()), 400_000)
 
