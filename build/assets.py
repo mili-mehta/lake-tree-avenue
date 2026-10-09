@@ -33,23 +33,10 @@ PLAN_SHEET_SRCS = {
 _WHITE = 247  # a channel value above this counts as blank paper
 
 # The drawing sheet carries the site plan in its upper two thirds and a strip
-# of floor plans and elevations below. The brochure shows those drawings in
-# their own section, so the plot map crops to the site plan alone — fractions
+# of floor plans below. The brochure shows the floor plans from their own
+# issued sheets, so the plot map crops to the site plan alone — fractions
 # of the rendered page.
 SITE_BOX = (0.020, 0.055, 0.980, 0.775)
-
-# Generous catch boxes over the rendered layout page's bottom strip, which
-# carries two floor-plan sets and the elevation pair. Each box only has to
-# contain its drawing and none of its neighbour's; the exact frame comes from
-# trimming blank paper afterwards, so a caption is never clipped.
-# Neither unit type is cropped from this strip any more: both have their
-# own full-resolution sheets, which is the only way the room dimensions
-# printed inside them survive to the page. The elevation pair has no
-# separate source, so it is still lifted from here.
-PLAN_BOXES = {
-    "elevation": (0.592, 0.765, 0.862, 0.920),
-}
-
 
 def _encode(img: Image.Image, fmt: str, **kw) -> bytes:
     buf = io.BytesIO()
@@ -164,25 +151,6 @@ def plan_sheets(unit_key: str, quality: int = 92) -> dict[str, bytes]:
         img = _trim_white(Image.open(src).convert("RGB"))
         out[key] = _encode(img, "JPEG", quality=quality, optimize=True,
                            progressive=True)
-    return out
-
-
-def plan_crops(width: int = 7200, quality: int = 90) -> dict[str, bytes]:
-    """Drawings lifted off the layout sheet, at a width you can read them at.
-
-    `width` is the whole layout page; each crop keeps about a fifth of it.
-    The page is vector, so rendering it larger recovers real detail rather
-    than inventing it, and these crops carry room dimensions set in type a
-    couple of millimetres tall. At the old 2400 the Type B plan reached the
-    brochure 514 px wide and those figures were a smudge.
-    """
-    full = _layout_pixmap(width)
-    w, h = full.size
-    out = {}
-    for key, (x0, y0, x1, y1) in PLAN_BOXES.items():
-        box = (round(x0 * w), round(y0 * h), round(x1 * w), round(y1 * h))
-        out[key] = _encode(_trim_white(full.crop(box)), "JPEG",
-                           quality=quality, optimize=True)
     return out
 
 

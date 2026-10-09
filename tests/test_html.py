@@ -2,6 +2,43 @@ import re
 import unittest
 from build import build_html, content
 
+RULE = re.compile(r"([^{}]+)\{([^}]*)\}")
+BACKGROUND = re.compile(r"background[^;:]*:\s*#([0-9a-fA-F]{6})")
+# A filled button is an accent the size of a thumb, not a page ground, so it
+# is held to text contrast (test_filled_button_carries_its_label) instead of
+# to the light-ground rule.
+ACCENT = re.compile(r"\.btn\b")
+
+
+def _channels(hexcode):
+    h = hexcode.lstrip("#")
+    return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+
+def _luminance(hexcode):
+    def lin(c):
+        c /= 255.0
+        return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+    r, g, b = (lin(c) for c in _channels(hexcode))
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def _contrast(fg, bg):
+    a, b = sorted((_luminance(fg), _luminance(bg)), reverse=True)
+    return (a + 0.05) / (b + 0.05)
+
+
+def _tokens(css):
+    return dict(re.findall(r"(--[a-z-]+):\s*(#[0-9a-fA-F]{6})", css))
+
+
+def _declaration(css, selector, prop):
+    """One resolved hex value from one rule, following a var() reference."""
+    body = re.search(re.escape(selector) + r"\s*\{([^}]*)\}", css).group(1)
+    raw = re.search(rf"(?<![-\w]){prop}:\s*([^;]+)", body).group(1).strip()
+    var = re.fullmatch(r"var\((--[a-z-]+)\)", raw)
+    return _tokens(css)[var.group(1)] if var else raw
+
 
 class TestHtml(unittest.TestCase):
     @classmethod
@@ -85,10 +122,79 @@ class TestHtml(unittest.TestCase):
         self.assertRegex(self.html, r"body\s*\{[^}]*background")
 
     def test_no_dark_page_ground(self):
-        for hexcode in re.findall(r"background[^;:]*:\s*#([0-9a-fA-F]{6})", self.html):
-            r, g, b = (int(hexcode[i:i + 2], 16) for i in (0, 2, 4))
-            luma = 0.2126 * r + 0.7152 * g + 0.0722 * b
-            self.assertGreater(luma, 120, f"dark background #{hexcode}")
+        # Grounds only: a dark page washes out in WhatsApp's in-app viewer.
+        for selector, body in RULE.findall(build_html.CSS):
+            if ACCENT.search(selector):
+                continue
+            for hexcode in BACKGROUND.findall(body):
+                r, g, b = _channels(hexcode)
+                luma = 0.2126 * r + 0.7152 * g + 0.0722 * b
+                self.assertGreater(luma, 120,
+                                   f"dark background #{hexcode} on {selector.strip()}")
+        for style in re.findall(r'style="([^"]*)"', self.markup):
+            self.assertEqual(BACKGROUND.findall(style), [], style)
+
+    def test_filled_button_carries_its_label(self):
+        # The one dark fill on the page. Its label is normal-size text, so
+        # it owes 4.5:1, not the 3:1 that large text gets away with.
+        css = build_html.CSS
+        fill = _declaration(css, ".btn", "background")
+        ink = _declaration(css, ".btn", "color")
+        self.assertGreaterEqual(round(_contrast(ink, fill), 2), 4.5,
+                                f"{ink} on {fill}")
+        hover = _declaration(css, ".btn:hover, .btn:focus-visible", "background")
+        self.assertGreaterEqual(round(_contrast(ink, hover), 2), 4.5,
+                                f"{ink} on {hover}")
+
+    def test_quiet_button_reads_as_the_second_tier(self):
+        css = build_html.CSS
+        self.assertNotEqual(_declaration(css, ".btn", "background"),
+                            _declaration(css, ".btn-quiet", "background"))
+        self.assertEqual(_declaration(css, ".btn-quiet", "background"), "#ffffff")
+
+    def test_every_button_pairs_a_glyph_with_words(self):
+        # A glyph alone is a guess; the words are what make it a CTA.
+        for tag in re.findall(r'<a class="btn[^>]*>.*?</a>', self.markup):
+            self.assertIn("<svg", tag, tag)
+            self.assertRegex(re.sub(r"<[^>]+>", "", tag).strip(), r"[A-Za-z]")
+
+    def test_social_chips_use_each_network_own_mark(self):
+        # Original artwork, not a monochrome house glyph: Instagram's
+        # gradient camera and Facebook's blue f are recognised on sight.
+        self.assertIn('id="ig"', self.markup)
+        self.assertIn('fill="url(#ig)"', self.markup)
+        self.assertIn('fill="#1877F2"', self.markup)
+        self.assertIn('fill="#25D366"', self.markup)
+        for network, key in (("Instagram", "instagram_url"),
+                             ("Facebook", "facebook_url")):
+            self.assertRegex(
+                self.markup,
+                rf'<a class="chip" href="{re.escape(content.PROJECT[key])}"'
+                rf'[^>]*aria-label="{network}',
+                f"{network} chip is not labelled",
+            )
+
+    def test_chips_offer_whatsapp_and_click_to_call(self):
+        chips = re.findall(r'<a class="chip"[^>]*>', self.markup)
+        self.assertEqual(len(chips), 4, chips)
+        self.assertTrue(any(content.tel_link() in c for c in chips), chips)
+        self.assertTrue(any("wa.me" in c for c in chips), chips)
+        for chip in chips:
+            self.assertIn("aria-label=", chip, chip)
+
+    def test_icons_are_decorative_only(self):
+        svgs = re.findall(r"<svg[^>]*>", self.markup)
+        self.assertGreater(len(svgs), 8)
+        for svg in svgs:
+            self.assertIn('aria-hidden="true"', svg, svg)
+            self.assertIn('focusable="false"', svg, svg)
+
+    def test_sticky_bar_is_three_labelled_icons(self):
+        bar = self.markup.split('<nav class="bar"')[1].split("</nav>")[0]
+        self.assertEqual(bar.count("<svg"), 3, bar)
+        for word in ("Call", "WhatsApp", "Directions"):
+            self.assertIn(f">{word}</a>", bar)
+        self.assertIn("env(safe-area-inset-bottom", build_html.CSS)
 
     def test_plan_toggle_is_css_only_and_symmetric(self):
         # The toggle must work with scripting unavailable, so it is radio

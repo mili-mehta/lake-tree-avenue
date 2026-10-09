@@ -106,9 +106,9 @@ class TestSupersededFacts(unittest.TestCase):
 
 
 class TestStructure(unittest.TestCase):
-    def test_eight_sections_in_spec_order(self):
+    def test_seven_sections_in_spec_order(self):
         ids = [s["id"] for s in content.SECTIONS]
-        self.assertEqual(ids, ["cover", "project", "render", "plans",
+        self.assertEqual(ids, ["cover", "project", "plans",
                                "layout", "specs", "location", "contact"])
 
     def test_unit_types_cover_all_48_plots(self):

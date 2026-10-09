@@ -240,19 +240,6 @@ def _project(doc, art):
     return page
 
 
-def _elevation(doc, art):
-    page = _page(doc)
-    s = art["sections"]["render"]
-    _fill(page, fitz.Rect(0, 0, PAGE_SIZE[0], PAGE_SIZE[1]), SAND)
-    y = _heading(page, s["title"], s["lead"])
-    box = fitz.Rect(MARGIN, y + 6, PAGE_SIZE[0] - MARGIN, FOOTER_TOP - 40)
-    placed = _place_image(page, art["elevation"], box, pad=16, frame=True)
-    _text(page, fitz.Rect(placed.x0, FOOTER_TOP - 34, placed.x1, FOOTER_TOP - 4),
-          s["body"][0], font=SANS, size=8.5, color=INK_SOFT)
-    _footer(page)
-    return page
-
-
 # Everything the schedule column needs, so the drawing can have the rest.
 # Two drawings sharing one page would each come out around half this wide,
 # and the room dimensions printed inside them are only legible near full
@@ -450,14 +437,13 @@ def build_doc() -> fitz.Document:
         "logo": assets.logo_png(420),
         "render": assets.render_jpeg(1800),
         "site": assets.site_plan_jpeg(1500),
-        "elevation": assets.plan_crops()["elevation"],
         "sections": {s["id"]: s for s in content.SECTIONS},
     }
     for key in content.UNIT_TYPES:
         for floor, blob in assets.plan_sheets(key).items():
             art[f"sheet_{key}_{floor}"] = blob
     doc = fitz.open()
-    for builder in (_cover, _project, _elevation, _plans,
+    for builder in (_cover, _project, _plans,
                     _layout, _specs, _location, _contact):
         builder(doc, art)
     doc.set_metadata({

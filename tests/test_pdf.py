@@ -6,15 +6,15 @@ import unittest
 import fitz
 from build import build_pdf, content
 
-# cover, project, elevation, then a page per floor per type, then
+# cover, project, then a page per floor per type, then
 # layout, specs, location, contact
-PLAN_PAGES = {"A": (3, 4), "B": (5, 6)}
+PLAN_PAGES = {"A": (2, 3), "B": (4, 5)}
 GROUND_PAGE = {key: pages[0] for key, pages in PLAN_PAGES.items()}
 FIRST_PAGE = {key: pages[1] for key, pages in PLAN_PAGES.items()}
 ALL_PLAN_PAGES = [i for pages in PLAN_PAGES.values() for i in pages]
-LAYOUT_PAGE = 7
-SPECS_PAGE = 8
-CONTACT_PAGE = 10
+LAYOUT_PAGE = 6
+SPECS_PAGE = 7
+CONTACT_PAGE = 9
 
 
 class TestPdf(unittest.TestCase):
@@ -29,11 +29,11 @@ class TestPdf(unittest.TestCase):
     def tearDownClass(cls):
         os.unlink(cls.path)
 
-    def test_eleven_pages_a4_landscape(self):
+    def test_ten_pages_a4_landscape(self):
         # Both types take a page per floor. Two sheets sharing one page
         # shrink to roughly half the width, and at that size the room
         # dimensions printed inside them stop being readable.
-        self.assertEqual(self.doc.page_count, 11)
+        self.assertEqual(self.doc.page_count, 10)
         for page in self.doc:
             self.assertAlmostEqual(page.rect.width, 842.0, places=0)
             self.assertAlmostEqual(page.rect.height, 595.0, places=0)

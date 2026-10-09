@@ -139,13 +139,6 @@ section { padding: 84px 0; }
 }
 .schedule td { font-variant-numeric: tabular-nums; }
 
-/* ---------- render ---------- */
-.bleed img { width: 100%; }
-.caption {
-  font-family: var(--sans); font-size: 0.85rem; color: var(--ink-soft);
-  margin-top: 12px;
-}
-
 /* ---------- plans: CSS-only toggle ---------- */
 .plans input { position: absolute; opacity: 0; pointer-events: none; }
 .plan-tabs { display: flex; gap: 8px; margin-bottom: 26px; flex-wrap: wrap; }
@@ -202,7 +195,6 @@ section { padding: 84px 0; }
   font-family: var(--sans); font-size: 0.84rem; color: var(--ink-soft);
   margin-top: 14px; display: flex; gap: 22px; flex-wrap: wrap;
 }
-.inline-cta { font-family: var(--sans); font-size: 0.88rem; }
 
 /* ---------- specifications ---------- */
 .spec-list { margin: 0; }
@@ -369,9 +361,16 @@ ICONS = {
 }
 
 
-def _icon(name: str, size: int = 20) -> str:
-    """One decorative glyph; the link or button around it carries the words."""
+def _icon(name: str, size: int = 20, *, mono: bool = False) -> str:
+    """One decorative glyph; the link or button around it carries the words.
+
+    `mono` drops the network's own colour and takes the colour of the text
+    beside it: WhatsApp green on the filled terracotta button reads as a
+    smudge, and on that fill the silhouette alone is what is recognised.
+    """
     paint, body = ICONS[name]
+    if mono:
+        paint = 'fill="currentColor"'
     return (f'<svg class="ico" width="{size}" height="{size}" '
             f'viewBox="0 0 24 24" {paint} aria-hidden="true" '
             f'focusable="false">{body}</svg>')
@@ -428,7 +427,6 @@ def render_html() -> str:
     logo_small = assets.data_uri(assets.logo_png(260), "image/png")
     render = assets.data_uri(assets.render_jpeg(1600), "image/jpeg")
     layout = assets.data_uri(assets.site_plan_jpeg(1500), "image/jpeg")
-    elevation = assets.data_uri(assets.plan_crops()["elevation"], "image/jpeg")
     plan_sheets = {}
     for key, unit in content.UNIT_TYPES.items():
         blobs = assets.plan_sheets(key)
@@ -466,7 +464,7 @@ def render_html() -> str:
         f'{_esc(s["cover"]["body"][1])}</p>')
     out.append('<div class="actions">')
     out.append(f'<a class="btn" href="{wa}" target="_blank" rel="noopener">'
-               f'{_icon("whatsapp")}Enquire on WhatsApp</a>')
+               f'{_icon("whatsapp", mono=True)}Enquire on WhatsApp</a>')
     out.append(f'<a class="btn btn-quiet" href="{content.tel_link()}">'
                f'{_icon("phone")}Call {_esc(p["phone_display"])}</a>')
     out.append('<a class="btn btn-quiet" href="#plots">'
@@ -475,7 +473,7 @@ def render_html() -> str:
     out.append("</header>")
 
     # the project
-    out.append('<section><div class="wrap">')
+    out.append('<section class="band"><div class="wrap">')
     out.append('<div class="hd measure">')
     out.append(f"<h2>{_esc(s['project']['title'])}</h2>")
     out.append(f'<p class="lead">{_esc(s["project"]["lead"])}</p></div>')
@@ -483,16 +481,6 @@ def render_html() -> str:
     out.extend(f"<p>{_esc(b)}</p>" for b in s["project"]["body"])
     out.append("</div>")
     out.append(f'<table class="schedule">{_schedule_rows()}</table>')
-    out.append("</div></section>")
-
-    # render
-    out.append('<section class="band"><div class="wrap">')
-    out.append('<div class="hd measure">')
-    out.append(f"<h2>{_esc(s['render']['title'])}</h2>")
-    out.append(f'<p class="lead">{_esc(s["render"]["lead"])}</p></div>')
-    out.append(f'<div class="bleed"><img src="{elevation}" '
-               'alt="Front and rear elevations of a Lake Tree Avenue townhouse">')
-    out.append(f'<p class="caption">{_esc(s["render"]["body"][0])}</p></div>')
     out.append("</div></section>")
 
     # plans
@@ -577,7 +565,7 @@ def render_html() -> str:
         f'<div><h3>Call or message</h3><p>'
         f'<a class="with-ico" href="{content.tel_link()}">{_icon("phone", 18)}'
         f'{_esc(p["phone_display"])}</a><br>'
-        f'<a class="with-ico inline-cta" data-cta="whatsapp" href="{wa}" '
+        f'<a class="with-ico" data-cta="whatsapp" href="{wa}" '
         f'target="_blank" rel="noopener">{_icon("whatsapp", 18)}'
         f'WhatsApp {_esc(p["phone_display"])}</a><br>'
         f'<a class="with-ico" href="{content.mail_link()}">{_icon("mail", 18)}'
@@ -607,7 +595,7 @@ def render_html() -> str:
     out.append("</div>")
     out.append('<div class="actions" style="margin-top:34px">')
     out.append(f'<a class="btn" href="{wa}" target="_blank" rel="noopener">'
-               f'{_icon("whatsapp")}Enquire on WhatsApp</a>')
+               f'{_icon("whatsapp", mono=True)}Enquire on WhatsApp</a>')
     out.append(f'<a class="btn btn-quiet" href="{content.tel_link()}">'
                f'{_icon("phone")}Call {_esc(p["phone_display"])}</a>')
     out.append("</div>")

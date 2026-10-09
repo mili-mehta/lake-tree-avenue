@@ -26,8 +26,10 @@ PROJECT = {
     "instagram_url": "https://www.instagram.com/laketreeavenue",
     "facebook_url": "https://www.facebook.com/laketreeavenue",
     "site_address": ("Lake Tree Avenue, Waghodia Main Road, "
-                     "next to Spunpipe & Construction Co., Kamlapura, Vadodara"),
-    "regd_office": "1-B Ramkrishna Chambers, BPC Road, Alkapuri, Vadodara 390007",
+                     "next to Spunpipe & Construction Co., Kamlapura, "
+                     "Vadodara 391760"),
+    "regd_office": ("Regd. Office: 1-B Ramkrishna Chambers, BPC Road, "
+                    "Alkapuri, Vadodara 390007"),
     "site_latlng": SITE_LATLNG,
     # Google's documented universal maps URL (api=1). A "dir" link, not a
     # "search" one, so a tap on a phone hands off to the Maps app and comes
@@ -233,14 +235,6 @@ SECTIONS = (
             "Two plan types: six homes in the entrance row, forty-two along the "
             "avenue.",
         ),
-    },
-    {
-        "id": "render",
-        "title": "What the front gives away",
-        "lead": "Front and rear elevation, drawn to scale.",
-        "body": ("Exposed brick across the front, a standing balcony over the "
-                 "entrance, and the terrace parapet carried through as a line "
-                 "rather than a wall.",),
     },
     {
         "id": "plans",

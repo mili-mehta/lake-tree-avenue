@@ -70,44 +70,6 @@ class TestLayout(unittest.TestCase):
         self.assertLess(len(assets.layout_png()), 2_500_000)
 
 
-class TestPlanCrops(unittest.TestCase):
-    def setUp(self):
-        self.crops = assets.plan_crops()
-
-    def test_only_the_crops_still_consumed_are_produced(self):
-        # Both unit types are drawn from their own dedicated sheets now.
-        # Only the elevation pair has no source but the layout page.
-        self.assertEqual(sorted(self.crops), ["elevation"])
-
-    def test_crops_are_non_trivial_images(self):
-        for key, blob in self.crops.items():
-            img = _open(blob)
-            self.assertGreater(img.width, 300, key)
-            self.assertGreater(img.height, 150, key)
-
-    def test_crops_are_tightly_framed_on_their_drawing(self):
-        # A fixed crop box clips captions at one edge and leaves dead paper at
-        # the other. Every edge of a finished crop must carry ink.
-        for key, blob in self.crops.items():
-            img = _open(blob).convert("L")
-            w, h = img.size
-            edges = {
-                "top": [img.getpixel((x, 0)) for x in range(0, w, 4)],
-                "bottom": [img.getpixel((x, h - 1)) for x in range(0, w, 4)],
-                "left": [img.getpixel((0, y)) for y in range(0, h, 4)],
-                "right": [img.getpixel((w - 1, y)) for y in range(0, h, 4)],
-            }
-            for name, samples in edges.items():
-                self.assertLess(min(samples), 247,
-                                f"{key} crop has a blank {name} edge")
-
-    def test_crops_are_not_blank(self):
-        for key, blob in self.crops.items():
-            img = _open(blob).convert("L")
-            extrema = img.getextrema()
-            self.assertLess(extrema[0], 200, f"{key} crop looks blank")
-
-
 class TestPlanSheets(unittest.TestCase):
     """The dedicated floor plan drawings, ground floor first, per type."""
 
