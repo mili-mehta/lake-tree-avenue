@@ -12,9 +12,11 @@ from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LOGO_SRC = os.path.join(ROOT, "images", "Lake Tree Avenue new-Logo.png")
-RENDER_SRC = os.path.join(ROOT, "images", "lake-tree-avenue.PNG")
+RENDER_SRC = os.path.join(ROOT, "images",
+                          "lake-tree-avenue-street-view-hero-image.png")
 LAYOUT_SRC = os.path.join(ROOT, "REV.LAYOUT - 07-10-2026.pdf")
-SITE_PLAN_SRC = os.path.join(ROOT, "images", "site-plan.png")
+SITE_PLAN_SRC = os.path.join(ROOT, "images",
+                             "lake-tree-avenue-Layout Plan.png")
 KEY_PLAN_SRC = os.path.join(ROOT, "images",
                             "Lake Tree Avenue Key Plan.png")
 
@@ -33,6 +35,11 @@ PLAN_SHEET_SRCS = {
 }
 
 _WHITE = 247  # a channel value above this counts as blank paper
+
+# The hero runs full width above a band of sand deep enough for the
+# project name and the credit line. Shallower than this and the PDF
+# cover has nowhere to set them.
+RENDER_ASPECT = 1.8
 
 # The drawing sheet carries the site plan in its upper two thirds and a strip
 # of floor plans below. The brochure shows the floor plans from their own
@@ -90,8 +97,17 @@ def logo_png(height: int = 420) -> bytes:
 
 
 def render_jpeg(width: int = 1600, quality: int = 78) -> bytes:
+    """The street view, cropped to the band both artefacts are built for.
+
+    The source render is squarer than the band the cover leaves it: shown
+    whole it would push the PDF title off the page. Sky is the least told
+    part of the picture, so the crop comes off the top and the mark in the
+    lower corner is kept.
+    """
     img = Image.open(RENDER_SRC).convert("RGB")
     img = _trim_white(img)
+    keep = min(img.height, round(img.width / RENDER_ASPECT))
+    img = img.crop((0, img.height - keep, img.width, img.height))
     ratio = width / img.width
     img = img.resize((width, max(1, round(img.height * ratio))), Image.LANCZOS)
     return _encode(img, "JPEG", quality=quality, optimize=True, progressive=True)
