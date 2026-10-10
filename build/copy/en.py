@@ -21,9 +21,6 @@ META_DESCRIPTION = ("48 two-bedroom townhouses on Waghodia Main Road, "
 # Internal only. The owner credits the firm, never the individuals.
 WHATSAPP_MESSAGE = "Hi, I'd like to know more about Lake Tree Avenue."
 
-PLAN_PAIR_NOTE = ("Each sheet draws two adjacent homes. "
-                  "Every dimension is for one home.")
-
 UNIT_LABELS = {"A": "Type A", "B": "Type B"}
 
 # The plot range itself is language-neutral and lives in content.py; only
@@ -33,8 +30,6 @@ PLOTS_LABEL = "Plots {range}"
 SHEET_CAPTIONS = {"ground": "Ground floor", "first": "First floor"}
 
 ROOM_LABELS = {
-    "plot_width": "Plot width",
-    "plot_depth": "Plot depth",
     "plot_area": "Plot area",
     "living": "Living room / dining",
     "kitchen": "Kitchen",
@@ -44,26 +39,28 @@ ROOM_LABELS = {
     "second_attached_toilet": "Second attached toilet",
     "ground_toilet": "Ground floor toilet",
     "standing_balcony": "Standing balcony",
+    "ots": "O.T.S.",
     "also": "Also",
 }
 
 ROOM_VALUE_WORDS = {
     "standing_balcony": "2'-0\" wide, two",
-    "also": "Store, wash area, otta, private terrace",
+    "ots": "Open-to-sky shaft",
+    "also": "Store, wash area, otta",
 }
 
 PROJECT_SCHEDULE = (
     ("Homes", "48 townhouses, two bedrooms each"),
     ("Plan types", "Type A, plots 01–06 / Type B, plots 07–48"),
     ("Approach road", "12.00 m town planning road"),
-    ("Internal roads", "7.50 m, paved both sides"),
-    ("Levels", "Ground, first and private terrace"),
+    ("Internal roads", "7.50 m wide roads"),
+    ("Levels", "Ground and first floor"),
     ("Parking", "On plot, plus open-space parking"),
 )
 
 SPEC_GROUPS = (
     ("Structure", "As per architect and structure design."),
-    ("Wall finish", "Putty on internal walls. Exposed brick work on the front "
+    ("Wall finish", "Putty on internal walls. Exposed brick finish on the front "
                     "exterior wall as per architect design, exterior paint on "
                     "other exterior walls."),
     ("Flooring", "Vitrified flooring in all rooms with skirting. Anti-skid "
@@ -78,19 +75,16 @@ SPEC_GROUPS = (
                         "and stone frame. Colour-anodised aluminium windows with "
                         "safety grills."),
     ("Terrace", "Brick bed waterproofing treatment."),
-    ("Protection", "Anti-termite treatment at ground level. Overhead and "
-                   "underground water tanks."),
+    ("Protection", "Anti-termite treatment at ground level."),
 )
 
 AMENITIES = (
-    "Impressive gate with security cabin",
+    "Entry gate with security cabin",
     "Large open-space parking",
     "Underground cabling for a wire-free campus",
     "Tremix concrete internal roads with paved sides",
     "Roadside plantation and street lights",
     "Rain water harvesting system",
-    "Garbage storage provision",
-    "Landscape garden with community hall",
 )
 
 LOCATION_ROWS = (
@@ -136,7 +130,7 @@ SECTIONS = (
         "lead": "2 BHK townhouses in a gated campus on Waghodia Main Road.",
         "body": (
             "Lake Tree Avenue is a gated campus of 48 two-bedroom townhouses, "
-            "each with its own entrance, private terrace and parking.",
+            "each with its own entrance and parking.",
             "A 12-metre town planning road brings you to the gate. Inside, "
             "7.5-metre internal roads reach every door.",
             "Two plan types: six homes in the entrance row, forty-two along the "
@@ -146,7 +140,7 @@ SECTIONS = (
     {
         "id": "plans",
         "title": "Floor plans",
-        "lead": "Ground and first floor, drawn to scale.",
+        "lead": "Ground and first floor, every room dimensioned.",
         "body": ("Living and dining with the kitchen at ground level, both "
                  "bedrooms above, and the full terrace over them.",),
     },
@@ -185,7 +179,7 @@ SECTIONS = (
 )
 
 UI = {
-    # The connector inside a measured range: 703 to 994 sq ft. The numbers
+    # The connector inside a measured range: 703 to 1041 sq ft. The numbers
     # never move; only this word does.
     "range_to": "to",
 

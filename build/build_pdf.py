@@ -396,11 +396,7 @@ def _plan_page(doc, art, *, unit, caption, blob, rows):
           font=SANS_BOLD, size=9.5, color=TERRA_DEEP)
     _text(page, fitz.Rect(tx, MARGIN + 60, tx + tw, MARGIN + 86), caption,
           font=SERIF, size=15, color=INK_SOFT)
-    if _text(page, fitz.Rect(tx, MARGIN + 90, tx + tw, MARGIN + 128),
-             art["words"].PLAN_PAIR_NOTE, font=SANS, size=8.5, color=INK_SOFT,
-             leading=1.35) < 0:
-        raise LayoutOverflow("the plan pair note does not fit its box")
-    _schedule(page, rows, tx, MARGIN + 136, tw,
+    _schedule(page, rows, tx, MARGIN + 100, tw,
               label_w=138.0, size=9.5, pitch=26.0)
     _footer(page, art["words"])
     return page
@@ -410,8 +406,8 @@ def _plans(doc, art):
     """A page per floor per unit type, ground floor first within each.
 
     Both types are drawn on issued sheets of their own rather than the
-    strip of small plans on the layout page, and each sheet shows an
-    adjacent pair of townhouses, so each one is worth a page.
+    strip of small plans on the layout page, one home per sheet, so each
+    one is worth a page.
     """
     pages = []
     words = art["words"]

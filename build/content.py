@@ -113,7 +113,7 @@ UNIT_TYPES = {
     # Both types are read off their own pair of issued sheets, one per
     # floor, which supersede the strip of small plans on the layout page.
     # The homes within a type are identical inside; only the land under
-    # them varies, so plot width is a range and every room is one figure.
+    # them varies, so plot area is a range and every room is one figure.
     #
     # Rows are keyed, not labelled. The label is the one part of a row that
     # changes with the reader's language, and a sheet that referenced its
@@ -125,22 +125,18 @@ UNIT_TYPES = {
     "A": {
         "plot_range": "01–06",
         "rooms": (
-            ("plot_width", "17'-5\" {to} 24'-7½\"  "
-                           "[5.31 m {to} 7.51 m]"),
-            ("plot_depth", "40'-4½\"  [12.30 m]"),
-            # Width times depth at each end of the range, rounded down so
-            # the brochure never claims land the plot does not have. No
-            # metric twin: the two rows above carry it, and spelled out in
-            # full this one wrapped to a second line on its own.
-            ("plot_area", "703 {to} 994 sq ft"),
+            # As given by the developer. Plot width and depth are no longer
+            # stated: the area is the one figure a buyer compares.
+            ("plot_area", "703 {to} 1041 sq ft"),
             ("living", "16'-8\" × 15'-0\""),
             ("kitchen", "9'-9½\" × 9'-1½\""),
-            ("master_bed", "11'-0\" × 12'-6\""),
-            ("second_bed", "10'-1½\" × 11'-7½\""),
-            ("attached_toilet", "6'-0\" × 5'-0\""),
+            ("master_bed", "10'-9½\" × 12'-6\""),
+            ("second_bed", "10'-9½\" × 11'-7½\""),
+            ("attached_toilet", "5'-6\" × 5'-0\""),
             ("second_attached_toilet", "4'-0\" × 7'-0\""),
             ("ground_toilet", "4'-6\" × 5'-0\""),
             ("standing_balcony", None),
+            ("ots", None),
             ("also", None),
         ),
         # Which rows belong to which drawing. The PDF gives each floor a
@@ -150,23 +146,21 @@ UNIT_TYPES = {
         "sheets": (
             {
                 "key": "ground",
-                "rows": ("plot_width", "plot_depth", "plot_area",
-                         "living", "kitchen", "ground_toilet", "also"),
+                "rows": ("plot_area", "living", "kitchen", "ground_toilet",
+                         "also"),
             },
             {
                 "key": "first",
                 "rows": ("master_bed", "second_bed", "attached_toilet",
-                         "second_attached_toilet", "standing_balcony"),
+                         "second_attached_toilet", "standing_balcony",
+                         "ots"),
             },
         ),
     },
     "B": {
         "plot_range": "07–48",
         "rooms": (
-            ("plot_width", "18'-1½\" {to} 24'-8\"  "
-                           "[5.52 m {to} 7.52 m]"),
-            ("plot_depth", "39'-1\"  [11.91 m]"),
-            ("plot_area", "708 {to} 964 sq ft"),
+            ("plot_area", "707 {to} 1050 sq ft"),
             ("living", "17'-4½\" × 15'-0\""),
             ("kitchen", "10'-6\" × 8'-1½\""),
             ("master_bed", "11'-0\" × 12'-6\""),
@@ -175,18 +169,20 @@ UNIT_TYPES = {
             ("second_attached_toilet", "4'-0\" × 7'-0\""),
             ("ground_toilet", "4'-6\" × 5'-0\""),
             ("standing_balcony", None),
+            ("ots", None),
             ("also", None),
         ),
         "sheets": (
             {
                 "key": "ground",
-                "rows": ("plot_width", "plot_depth", "plot_area",
-                         "living", "kitchen", "ground_toilet", "also"),
+                "rows": ("plot_area", "living", "kitchen", "ground_toilet",
+                         "also"),
             },
             {
                 "key": "first",
                 "rows": ("master_bed", "second_bed", "attached_toilet",
-                         "second_attached_toilet", "standing_balcony"),
+                         "second_attached_toilet", "standing_balcony",
+                         "ots"),
             },
         ),
     },

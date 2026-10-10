@@ -156,9 +156,11 @@ class TestPdf(unittest.TestCase):
                    if fitz.Rect(info["bbox"]).height > 150]
             self.assertEqual(len(big), 1, f"page {i+1} is not a single plan")
             rect = big[0]
-            self.assertGreater(rect.height, 350,
+            # The sheets are portrait, so height is the dimension that runs
+            # out first and the one that decides how big the text prints.
+            self.assertGreater(rect.height, 440,
                                f"page {i+1} plan is only {rect.height:.0f} pt tall")
-            self.assertGreater(rect.width, 380,
+            self.assertGreater(rect.width, 220,
                                f"page {i+1} plan is only {rect.width:.0f} pt wide")
 
     def test_each_plan_page_fills_the_column_it_was_given(self):
@@ -193,12 +195,6 @@ class TestPdf(unittest.TestCase):
             self.assertIn("Master bedroom", first, f"Type {key}")
             self.assertIn("Second bedroom", first, f"Type {key}")
             self.assertNotIn("Master bedroom", ground, f"Type {key}")
-
-    def test_each_plan_page_says_it_draws_two_adjacent_homes(self):
-        for i in ALL_PLAN_PAGES:
-            self.assertIn(" ".join(EN.PLAN_PAIR_NOTE.split()),
-                          self._flat(i),
-                          f"page {i+1} does not say the sheet shows a pair")
 
     def test_each_plan_page_names_the_plots_it_is_drawing(self):
         for key, pages in PLAN_PAGES.items():

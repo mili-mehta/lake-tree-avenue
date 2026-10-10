@@ -161,12 +161,8 @@ section { padding: 84px 0; }
 .plan-grid { display: grid; grid-template-columns: 1fr; gap: 30px; align-items: start; }
 .plan-sheet { border: 1px solid var(--rule); background: #ffffff; padding: 14px;
   margin: 0; }
-.plan-sheet + .plan-sheet { margin-top: 22px; }
+.plan-sheets { display: grid; grid-template-columns: 1fr; gap: 22px; }
 .plan-sheet img { display: block; width: 100%; }
-.plan-note {
-  font-family: var(--sans); font-size: 0.86rem; color: var(--ink-soft);
-  margin: 16px 0 0;
-}
 .plan-sheet figcaption {
   font-family: var(--sans); font-size: 0.8rem; letter-spacing: 0.08em;
   text-transform: uppercase; color: var(--ink-soft); padding-top: 12px;
@@ -267,8 +263,10 @@ footer img { width: 128px; margin-bottom: 18px; }
   .hero-panel { padding: 54px 0 58px; }
   .plan-grid { grid-template-columns: 1.55fr 1fr; gap: 46px; }
   /* Drawings with their dimensions printed inside them need the full
-     measure; the schedule goes underneath rather than alongside. */
+     measure; the schedule goes underneath rather than alongside. The
+     sheets are portrait, so the two floors share that measure. */
   .plan-grid-stacked { grid-template-columns: 1fr; gap: 34px; }
+  .plan-grid-stacked .plan-sheets { grid-template-columns: 1fr 1fr; gap: 26px; }
   .spec-list div { grid-template-columns: 210px 1fr; gap: 26px; }
   .amenities { columns: 2; }
   .distances { grid-template-columns: 1fr 1fr; column-gap: 44px; }
@@ -588,12 +586,11 @@ def _plan_pane(locale: str, key: str, words) -> str:
             '<figure class="plan-sheet">'
             + _shot(shot_key, label)
             + f"<figcaption>{_esc(caption)}</figcaption></figure>")
-    note = f'<p class="plan-note">{_esc(words.PLAN_PAIR_NOTE)}</p>'
     stacked = " plan-grid-stacked" if len(sheets) > 1 else ""
     return (
         f'<div class="plan-pane pane-{key.lower()}">'
         f'<div class="plan-grid{stacked}">'
-        f"<div>{figures}{note}</div>"
+        f'<div class="plan-sheets">{figures}</div>'
         f'<div><table class="schedule">{rows}</table></div>'
         f"</div></div>"
     )

@@ -18,18 +18,18 @@ SITE_PLAN_SRC = os.path.join(ROOT, "images", "site-plan.png")
 KEY_PLAN_SRC = os.path.join(ROOT, "images",
                             "Lake Tree Avenue Key Plan-landscape.png")
 
-# The floor plans as issued: one sheet per floor per unit type, each
-# showing an adjacent pair of townhouses. Ground floor first, the order a
-# visitor walks the house in.
+# The floor plans as issued: one portrait sheet per floor per unit type,
+# each showing a single townhouse. Ground floor first, the order a visitor
+# walks the house in.
 def _plan_src(name: str) -> str:
     return os.path.join(ROOT, "images", name)
 
 
 PLAN_SHEET_SRCS = {
-    "A": (("ground", _plan_src("plot-1-6-ground-floor-plan.png")),
-          ("first", _plan_src("plot-1-6-first-floor-plan.png"))),
-    "B": (("ground", _plan_src("plot-7-48-ground-floor-plan.png")),
-          ("first", _plan_src("plot-7-48-first-floor-plan.png"))),
+    "A": (("ground", _plan_src("plot 1-06-ground Floor Plan.png")),
+          ("first", _plan_src("plot 1-06-First Floor Plan.png"))),
+    "B": (("ground", _plan_src("plot 7-48-Ground Floor Plan.png")),
+          ("first", _plan_src("plot 7-48-First Floor Plan.png"))),
 }
 
 _WHITE = 247  # a channel value above this counts as blank paper
@@ -155,7 +155,7 @@ def plan_sheets(unit_key: str, quality: int = 92) -> dict[str, bytes]:
     """One unit type's floor plans, ground floor first.
 
     These are kept at the resolution they arrived at. The sources run
-    1050-1350 px across, and the figures that matter to a buyer -- 9'-9" x
+    940-1030 px across, and the figures that matter to a buyer -- 9'-9" x
     9'-1", 4'-6" x 5'-0" -- are a few pixels tall inside them, so there is
     nothing to spend on a downscale and everything to lose. Quality is set well
     above the photographic images for the same reason: the drawings are

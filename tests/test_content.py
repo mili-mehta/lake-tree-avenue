@@ -85,17 +85,6 @@ class TestWhatsAppEncoding(unittest.TestCase):
 
 
 
-def _imperial(value):
-    """Every feet-and-inches measurement in a schedule value, in order."""
-    return re.findall(r"\d+'-\d+[½¼¾]?\"", value)
-
-
-def _feet(text):
-    text = text.replace("½", ".5").replace("¼", ".25").replace("¾", ".75")
-    feet, _, inches = text.replace('"', "").partition("'-")
-    return float(feet) + float(inches or 0) / 12
-
-
 class TestSupersededFacts(unittest.TestCase):
     def _all_strings(self):
         out = []
@@ -149,41 +138,13 @@ class TestStructure(unittest.TestCase):
         self.assertEqual(rooms["Second bedroom"], "10'-1½\" × 10'-7½\"")
         self.assertEqual(rooms["Living room / dining"], "17'-4½\" × 15'-0\"")
 
-    def test_type_b_plot_width_is_a_range_across_the_row(self):
-        # Both plots 07-48 sheets dimension the same adjacent pair, 24'-8"
-        # beside 18'-1½", so the row widths genuinely differ along the
-        # avenue and a single figure would be wrong for half of them.
-        rooms = _rooms("B")
-        self.assertEqual(rooms["Plot width"],
-                         "18'-1½\" to 24'-8\"  [5.52 m to 7.52 m]")
-
-    def test_type_b_plot_depth_is_the_drawn_depth_not_a_chain_segment(self):
-        # 24'-3" [7.39] is a segment of the depth chain
-        # (1.52 + 7.39 + 3.00 = 11.91). Advertising it as the plot depth
-        # sells 65.7 m2 of land as 40.8 m2.
-        rooms = _rooms("B")
-        self.assertEqual(rooms["Plot depth"], "39'-1\"  [11.91 m]")
-
-    def test_type_a_plot_width_is_a_range_across_the_six_plots(self):
-        # The two Type A sheets dimension different adjacent pairs: the
-        # ground floor sheet carries 20'-5" and 17'-5", the first floor
-        # sheet 24'-7½" and 18'-1½". A single width would be wrong for
-        # four of the six plots, so the schedule gives the range.
-        rooms = _rooms("A")
-        self.assertEqual(rooms["Plot width"],
-                         "17'-5\" to 24'-7½\"  [5.31 m to 7.51 m]")
-
-    def test_type_a_plot_depth_is_the_drawn_depth(self):
-        rooms = _rooms("A")
-        self.assertEqual(rooms["Plot depth"], "40'-4½\"  [12.30 m]")
-
     def test_type_a_first_floor_dimensions_match_the_drawing(self):
-        # Read off the plots 01-06 first floor sheet. These three rows used
-        # to disagree with the drawing printed beside them.
+        # Read off the plots 01-06 first floor sheet: the front bedroom and
+        # its toilet are narrower than Type B's.
         rooms = _rooms("A")
-        self.assertEqual(rooms["Master bedroom"], "11'-0\" × 12'-6\"")
-        self.assertEqual(rooms["Second bedroom"], "10'-1½\" × 11'-7½\"")
-        self.assertEqual(rooms["Attached toilet"], "6'-0\" × 5'-0\"")
+        self.assertEqual(rooms["Master bedroom"], "10'-9½\" × 12'-6\"")
+        self.assertEqual(rooms["Second bedroom"], "10'-9½\" × 11'-7½\"")
+        self.assertEqual(rooms["Attached toilet"], "5'-6\" × 5'-0\"")
         self.assertEqual(rooms["Second attached toilet"], "4'-0\" × 7'-0\"")
 
     def test_type_a_ground_floor_dimensions_match_the_drawing(self):
@@ -214,7 +175,7 @@ class TestStructure(unittest.TestCase):
     def test_sheet_rows_resolves_in_sheet_order(self):
         unit = content.UNIT_TYPES["A"]
         rows = content.sheet_rows(unit, unit["sheets"][1], EN)
-        self.assertEqual(rows[0], ("Master bedroom", "11'-0\" × 12'-6\""))
+        self.assertEqual(rows[0], ("Master bedroom", "10'-9½\" × 12'-6\""))
         self.assertEqual([name for name, _ in rows],
                          [EN.ROOM_LABELS[k] for k in unit["sheets"][1]["rows"]])
 
@@ -232,49 +193,33 @@ class TestStructure(unittest.TestCase):
             self.assertFalse([r for r in ground if "bedroom" in r.lower()],
                              f"Type {key} schedules a bedroom on the ground floor")
 
-    def test_a_note_explains_that_each_sheet_draws_two_homes(self):
-        # Every sheet draws an adjacent pair, so a reader sees two kitchens
-        # and two staircases. Without a note the schedule beside it reads
-        # as covering both, and the plot area is the figure that misleads.
-        note = EN.PLAN_PAIR_NOTE
-        self.assertIn("two", note.lower())
-        self.assertIn("one home", note.lower())
-
     def test_both_types_state_a_plot_area_in_square_feet(self):
         for key, unit in content.UNIT_TYPES.items():
             area = _rooms(key).get("Plot area")
             self.assertIsNotNone(area, f"Type {key} states no plot area")
             self.assertIn("sq ft", area, f"Type {key} area is not in square feet")
 
-    def test_plot_area_is_the_width_range_times_the_depth(self):
-        # The area is the one figure a buyer compares between projects, and
-        # it is the one nobody can check by eye. Derive it from the two
-        # dimensions printed beside it rather than trusting the literal.
-        for key, unit in content.UNIT_TYPES.items():
+    def test_plot_area_is_the_range_the_developer_gave(self):
+        self.assertEqual(_rooms("A")["Plot area"], "703 to 1041 sq ft")
+        self.assertEqual(_rooms("B")["Plot area"], "707 to 1050 sq ft")
+
+    def test_plot_width_and_depth_are_not_stated(self):
+        for key in content.UNIT_TYPES:
             rooms = _rooms(key)
-            lo_w, hi_w = (_feet(t) for t in _imperial(rooms["Plot width"]))
-            depth = _feet(_imperial(rooms["Plot depth"])[0])
-            got_lo, got_hi = (int(n) for n in
-                              re.findall(r"(\d+) to (\d+) sq ft",
-                                         rooms["Plot area"])[0])
-            for got, want in ((got_lo, lo_w * depth), (got_hi, hi_w * depth)):
-                self.assertLessEqual(got, want,
-                                     f"Type {key} overstates the plot area")
-                self.assertGreater(got, want - 1.0,
-                                   f"Type {key} understates the plot area by "
-                                   f"more than a square foot")
+            self.assertNotIn("Plot width", rooms, f"Type {key}")
+            self.assertNotIn("Plot depth", rooms, f"Type {key}")
+
+    def test_no_private_terrace_is_claimed(self):
+        for code in copy.LOCALES:
+            words = copy.for_locale(code)
+            blob = " ".join(text for _, text in copy.strings(words))
+            blob += " ".join(words.ROOM_VALUE_WORDS.values())
+            for term in ("private terrace", "निजी टेरेस", "ખાનગી ટેરેસ"):
+                self.assertNotIn(term, blob, code)
 
     def test_plot_area_is_scheduled_with_the_ground_floor(self):
         for key, unit in content.UNIT_TYPES.items():
             self.assertIn("plot_area", unit["sheets"][0]["rows"], f"Type {key}")
-
-    def test_both_types_state_a_plot_width_and_a_plot_depth(self):
-        for key, unit in content.UNIT_TYPES.items():
-            rooms = _rooms(key)
-            self.assertIn("Plot width", rooms, f"Type {key}")
-            self.assertIn("Plot depth", rooms, f"Type {key}")
-            self.assertNotIn("Plot size", rooms,
-                             f"Type {key} still states one plot size")
 
     def test_no_type_advertises_a_dimension_chain_segment_as_a_plot_size(self):
         for key, unit in content.UNIT_TYPES.items():

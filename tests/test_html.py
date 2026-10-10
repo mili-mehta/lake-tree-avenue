@@ -258,13 +258,6 @@ class TestHtml(unittest.TestCase):
                                 pane.index(captions["first"]),
                                 f"{locale} pane {key} puts the first floor first")
 
-    def test_each_pane_says_it_draws_two_adjacent_homes(self):
-        for locale in copy.LOCALES:
-            note = copy.for_locale(locale).PLAN_PAIR_NOTE
-            for key in ("a", "b"):
-                self.assertIn(note, self._pane(key, locale),
-                              f"{locale} pane {key} does not say it shows a pair")
-
     def test_each_pane_names_its_own_plots_in_its_alt_text(self):
         # The pictures are CSS backgrounds, so the accessible name is an
         # aria-label. Every language gets its own; the plot numbers do not
