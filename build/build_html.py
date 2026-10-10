@@ -238,12 +238,16 @@ section { padding: 84px 0; }
 }
 .plot-table td { text-align: right; color: var(--ink-soft);
   font-size: 0.95rem; }
-/* The entrance row is the one part of the schedule a reader can place on
-   the drawing at a glance, so its six plots are tinted rather than
-   labelled -- a type column repeated forty-eight times would say "B"
-   forty-two times. */
-.plot-table .plot-a th, .plot-table .plot-a td { background: #faf2e6; }
-.plot-table .plot-a th { color: var(--terra-deep); }
+/* The area head sits over its own figures, not over the gap between the
+   two columns: a head that starts where the numbers end reads as a label
+   for the column beside it. */
+.plot-table thead th:last-child { text-align: right; }
+/* The bigger plots are tinted rather than listed apart, so the schedule
+   stays in site-plan order -- a reader looking up plot 35 still finds it
+   where the drawing says it is -- while the plots worth choosing between
+   come forward off the page. */
+.plot-table .plot-wide th, .plot-table .plot-wide td { background: #faf2e6; }
+.plot-table .plot-wide th { color: var(--terra-deep); }
 .plot-note { font-family: var(--sans); font-size: 0.84rem;
   color: var(--ink-soft); margin: 14px auto 0; max-width: 820px; }
 
@@ -644,8 +648,8 @@ def _plot_schedule(words) -> str:
         out.append(f'<thead><tr><th scope="col">{_esc(ui["plot_no_col"])}'
                    f'</th><th scope="col">{_esc(ui["plot_area_col"])}'
                    "</th></tr></thead><tbody>")
-        for number, area, unit_key in column:
-            cls = ' class="plot-a"' if unit_key == "A" else ""
+        for number, area, wide in column:
+            cls = ' class="plot-wide"' if wide else ""
             out.append(f"<tr{cls}><th scope=\"row\">{_esc(number)}</th>"
                        f"<td>{_esc(area)}</td></tr>")
         out.append("</tbody></table>")

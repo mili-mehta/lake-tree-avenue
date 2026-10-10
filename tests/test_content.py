@@ -336,11 +336,23 @@ class TestPlotSchedule(unittest.TestCase):
     def test_the_cells_are_two_digit_numbers_and_latin_areas(self):
         cells = content.plot_area_cells()
         self.assertEqual(len(cells), 48)
-        self.assertEqual(cells[0], ("01", "1041 sq ft", "A"))
-        self.assertEqual(cells[-1], ("48", "863 sq ft", "B"))
+        self.assertEqual(cells[0], ("01", "1041 sq ft", True))
+        self.assertEqual(cells[-1], ("48", "863 sq ft", True))
         for number, area, _ in cells:
             self.assertRegex(number, r"^\d\d$")
             self.assertRegex(area, r"^\d{3,4} sq ft$")
+
+    def test_only_the_plots_over_the_threshold_are_marked_large(self):
+        # The mark is the area, not the plan type: plot 01 is a Type A
+        # home on 1041 sq ft and plot 02 a Type A home on 703, and a
+        # reader comparing ground wants those two told apart.
+        marked = {int(n) for n, _, wide in content.plot_area_cells() if wide}
+        expected = {n for n, a in content.PLOT_AREAS
+                    if a > content.LARGE_PLOT_SQFT}
+        self.assertEqual(marked, expected)
+        self.assertEqual(len(marked), 17)
+        self.assertNotIn(37, marked)  # 714 sq ft, a point under the line
+        self.assertIn(11, marked)     # 822 sq ft, a Type B plot
 
     def test_no_price_or_payment_term_travels_with_the_areas(self):
         # The schedule was issued as a price list. What is carried here is

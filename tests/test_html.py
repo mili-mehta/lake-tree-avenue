@@ -579,11 +579,18 @@ class TestPlotSchedule(unittest.TestCase):
                     schedule.count(f'<th scope="col">{html.escape(head)}'
                                    "</th>"), 3, f"{locale} {head}")
 
-    def test_the_entrance_row_is_marked_without_a_column_of_its_own(self):
-        # Six tinted rows, not forty-eight repetitions of a type letter.
+    def test_the_larger_plots_are_tinted_in_place(self):
+        # Marked where they sit in the schedule rather than lifted into a
+        # list of their own, so the run of numbers still matches the
+        # drawing above it.
+        wide = [n for n, _, w in content.plot_area_cells() if w]
         for locale in copy.LOCALES:
-            self.assertEqual(self._schedule(locale).count('class="plot-a"'),
-                             6, locale)
+            schedule = self._schedule(locale)
+            self.assertEqual(schedule.count('class="plot-wide"'),
+                             len(wide), locale)
+            for number in wide:
+                self.assertIn(f'<tr class="plot-wide"><th scope="row">'
+                              f"{number}</th>", schedule, f"{locale} {number}")
 
     def test_no_price_or_payment_term_is_published_with_the_areas(self):
         for locale in copy.LOCALES:

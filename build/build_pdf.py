@@ -556,9 +556,10 @@ def _plot_areas(doc, art):
     on. The plan pages quote a type's plot area as a range -- one drawing
     serves forty-two homes -- and this is the sheet behind that range.
 
-    The six entrance-row plots are banded rather than labelled: a type
-    column would print the same letter forty-two times to tell the reader
-    something the tint tells them at a glance.
+    The plots above `content.LARGE_PLOT_SQFT` are banded rather than
+    pulled into a list of their own: the schedule stays in site-plan
+    order, which is the order a reader with the drawing in front of them
+    reads it in, and the larger plots still come forward off the page.
 
     Every row is measured and the build fails if the schedule outgrows
     the page. A plot that silently dropped off the bottom is a plot a
@@ -590,12 +591,12 @@ def _plot_areas(doc, art):
               align=2)
         cy += 16
         _line(page, x, cy, x + col_w, color=INK, width=0.9)
-        for number, area, unit_key in column:
-            if unit_key == "A":
+        for number, area, wide in column:
+            if wide:
                 _fill(page, fitz.Rect(x, cy, x + col_w, cy + PLOT_PITCH), SAND)
             _text(page, fitz.Rect(x + 2, cy + 3, x + split, cy + PLOT_PITCH + 3),
                   number, font=SANS_BOLD, size=9,
-                  color=TERRA_DEEP if unit_key == "A" else INK)
+                  color=TERRA_DEEP if wide else INK)
             if _text(page, fitz.Rect(x + split, cy + 3, x + col_w - 2,
                                      cy + PLOT_PITCH + 3),
                      area, font=SERIF, size=9.5, color=INK, align=2) < 0:

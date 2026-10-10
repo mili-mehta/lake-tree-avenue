@@ -135,6 +135,14 @@ PLOT_AREAS = (
 # sq ft" against every other brochure they are holding.
 AREA_UNIT = "sq ft"
 
+# Most of the scheme is one plot: thirty-one homes stand on 703 to 714
+# sq ft and read as the same piece of ground. Above this figure the plot
+# is visibly bigger -- a corner, a head of a row, a wider frontage -- and
+# those are the plots a buyer is choosing between. The schedules tint
+# them so the reader finds them without comparing forty-eight numbers by
+# eye.
+LARGE_PLOT_SQFT = 715
+
 
 UNIT_TYPES = {
     # Both types are read off their own pair of issued sheets, one per
@@ -268,13 +276,13 @@ def plot_unit_key(number: int) -> str:
     raise KeyError(f"plot {number} belongs to no plan type")
 
 
-def plot_area_cells() -> tuple[tuple[str, str, str], ...]:
-    """The plot schedule, ready to set: number, area, plan type.
+def plot_area_cells() -> tuple[tuple[str, str, bool], ...]:
+    """The plot schedule, ready to set: number, area, and whether it is big.
 
-    Nothing here is translated. A plot number is a plot number, the area
-    is Latin numerals and `AREA_UNIT`, and the type key is structure --
-    the renderers label it from the reader's own UNIT_LABELS.
+    Nothing here is translated. A plot number is a plot number and the
+    area is Latin numerals and `AREA_UNIT`; the flag is a fact about the
+    land, not a word, and each renderer marks it in its own way.
     """
     return tuple((f"{number:02d}", f"{area} {AREA_UNIT}",
-                  plot_unit_key(number))
+                  area > LARGE_PLOT_SQFT)
                  for number, area in PLOT_AREAS)
