@@ -156,7 +156,6 @@ UI = {
     "call": "कॉल {phone}",
     "whatsapp": "WhatsApp {phone}",
     "see_plot_map": "प्लॉट का नक़्शा देखिए",
-    "get_directions": "रास्ता देखिए",
     "directions_on_maps": "Google Maps पर रास्ता",
     "download_pdf": "यह ब्रोशर PDF में डाउनलोड कीजिए",
 

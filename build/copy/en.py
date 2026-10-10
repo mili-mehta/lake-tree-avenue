@@ -159,7 +159,6 @@ UI = {
     "call": "Call {phone}",
     "whatsapp": "WhatsApp {phone}",
     "see_plot_map": "See the plot map",
-    "get_directions": "Get directions",
     "directions_on_maps": "Directions on Google Maps",
     "download_pdf": "Download this brochure as a PDF",
 

@@ -501,46 +501,47 @@ def _specs(doc, art):
 
 
 def _location(doc, art):
+    """Where the project stands, and the drawing that shows it.
+
+    The prose and the key plan shared a spread until the lists came out
+    from under the drawing -- the schedule beside the prose and the
+    distances facing it both said what the artwork already draws. What
+    was left was two half-empty pages, so they are one page now: the
+    section's words across the top in two columns, the drawing filling
+    everything under them.
+
+    The drawing is 16:9 and draws to its own edges, so it takes all the
+    width the words leave it and sits centred in what remains. Its labels
+    are sized relative to its width, which is why the words are set as a
+    shallow band rather than a column: every point of depth they give up
+    is width the drawing gets back.
+    """
     page = _page(doc)
     s = art["sections"]["location"]
     p = content.PROJECT
-    y = _heading(page, s["title"], s["lead"], y=132.0)
-    # The prose runs wider than a half page now. The schedule that used to
-    # sit beside it -- road, between, next to, area, corridor -- and the
-    # distance columns under it both said what the key plan on the facing
-    # page already draws, so the page carries the prose, the address and
-    # the way there, and the drawing does the rest.
-    _text(page, fitz.Rect(MARGIN, y, MARGIN + 520, y + 150),
-          "\n\n".join(s["body"]) + "\n\n" + art["words"].ADDRESS,
-          font=SERIF, size=11, color=INK, leading=1.45)
-    rect = fitz.Rect(MARGIN, y + 150, MARGIN + 190, y + 178)
-    page.draw_rect(rect, color=TERRA, width=1.2)
-    _text(page, rect + (12, 8, 0, 0), art["words"].UI["get_directions"], font=SANS_BOLD,
-          size=9.5, color=TERRA_DEEP)
-    page.insert_link({"kind": fitz.LINK_URI, "from": rect, "uri": p["maps_url"]})
-    _footer(page, art["words"])
-    return page
-
-
-def _key_plan(doc, art):
-    """The landmark drawing, bled across the full width of its own page.
-
-    The artwork is 16:9 and draws to its own edges -- no border, no plate.
-    Framing it inside the margins would cost a quarter of its width, and
-    its labels are set relative to that width, so width is legibility.
-    So it runs from paper edge to paper edge.
-
-    Nothing else goes on the page. The drawing carries its own landmarks,
-    its own distances and its own "NOT TO SCALE" note, so a caption under
-    it and a list facing it only repeated what a reader is already
-    looking at.
-    """
-    page = _page(doc)
     _fill(page, fitz.Rect(0, 0, PAGE_SIZE[0], PAGE_SIZE[1]), SAND)
-    img = Image.open(io.BytesIO(art["key_plan"]))
-    height = PAGE_SIZE[0] * img.height / img.width
-    page.insert_image(fitz.Rect(0, 0, PAGE_SIZE[0], height),
-                      stream=art["key_plan"])
+
+    # Three columns, because depth here is width down there: the title
+    # and its lead, then the two paragraphs, then the address.
+    y = _heading(page, s["title"], s["lead"], width=300.0)
+    for x, width, text in ((390.0, 230.0, "\n\n".join(s["body"])),
+                           (650.0, PAGE_SIZE[0] - MARGIN - 650.0,
+                            art["words"].ADDRESS)):
+        box = fitz.Rect(x, MARGIN, x + width, MARGIN + 200)
+        spare = _text(page, box, text, font=SERIF, size=10.5, color=INK,
+                      leading=1.45)
+        if spare < 0:
+            raise LayoutOverflow(f"the location prose at {x:.0f} pt overflows")
+        y = max(y, MARGIN + (box.height - spare))
+
+    # The way there is in the footer of every page, so the page does not
+    # also need a button for it -- but the drawing is a picture, and a
+    # reader who wants directions off this page should not have to find
+    # the strip, so the artwork itself carries the link.
+    rect = _place_image(page, art["key_plan"],
+                        fitz.Rect(0, y + 16, PAGE_SIZE[0], FOOTER_TOP - 14))
+    page.insert_link({"kind": fitz.LINK_URI, "from": rect,
+                      "uri": p["maps_url"]})
     _footer(page, art["words"])
     return page
 
@@ -623,8 +624,7 @@ def build_doc(locale: str = copy.DEFAULT) -> fitz.Document:
     doc = fitz.open()
     with _using(locale):
         for builder in (_cover, _project, _plans,
-                        _layout, _specs, _location, _key_plan,
-                        _contact):
+                        _layout, _specs, _location, _contact):
             builder(doc, art)
     doc.set_metadata({
         "title": content.PROJECT["name"],

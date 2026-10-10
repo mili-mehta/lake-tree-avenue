@@ -154,7 +154,6 @@ UI = {
     "call": "કોલ {phone}",
     "whatsapp": "WhatsApp {phone}",
     "see_plot_map": "પ્લોટનો નકશો જુઓ",
-    "get_directions": "રસ્તો જુઓ",
     "directions_on_maps": "Google Maps પર રસ્તો",
     "download_pdf": "આ બ્રોશર PDF માં ડાઉનલોડ કરો",
 

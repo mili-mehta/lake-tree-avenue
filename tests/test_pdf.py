@@ -24,7 +24,7 @@ def _unligate(text: str) -> str:
     return text
 
 # cover, project, then a page per floor per type, then
-# layout, specs, location, key plan, contact
+# layout, specs, location (prose and the key plan together), contact
 PLAN_PAGES = {"A": (2, 3), "B": (4, 5)}
 GROUND_PAGE = {key: pages[0] for key, pages in PLAN_PAGES.items()}
 FIRST_PAGE = {key: pages[1] for key, pages in PLAN_PAGES.items()}
@@ -32,8 +32,7 @@ ALL_PLAN_PAGES = [i for pages in PLAN_PAGES.values() for i in pages]
 LAYOUT_PAGE = 6
 SPECS_PAGE = 7
 LOCATION_PAGE = 8
-KEY_PLAN_PAGE = 9
-CONTACT_PAGE = 10
+CONTACT_PAGE = 9
 
 
 class TestPdf(unittest.TestCase):
@@ -48,11 +47,11 @@ class TestPdf(unittest.TestCase):
     def tearDownClass(cls):
         os.unlink(cls.path)
 
-    def test_eleven_pages_a4_landscape(self):
+    def test_ten_pages_a4_landscape(self):
         # Both types take a page per floor. Two sheets sharing one page
         # shrink to roughly half the width, and at that size the room
         # dimensions printed inside them stop being readable.
-        self.assertEqual(self.doc.page_count, 11)
+        self.assertEqual(self.doc.page_count, 10)
         for page in self.doc:
             self.assertAlmostEqual(page.rect.width, 842.0, places=0)
             self.assertAlmostEqual(page.rect.height, 595.0, places=0)
@@ -328,12 +327,12 @@ class TestEveryLanguage(unittest.TestCase):
             doc.close()
             os.unlink(cls.paths[locale])
 
-    def test_every_language_builds_the_same_eleven_pages(self):
+    def test_every_language_builds_the_same_ten_pages(self):
         # A LayoutOverflow during the build is the real assertion here:
         # Devanagari runs longer than English, and a box tuned for the
         # English would drop the tail of a sentence.
         for locale, doc in self.docs.items():
-            self.assertEqual(doc.page_count, 11, locale)
+            self.assertEqual(doc.page_count, 10, locale)
 
     def test_every_indic_character_has_a_glyph(self):
         # A font missing one conjunct still renders the line, with a hole
@@ -453,52 +452,56 @@ if __name__ == "__main__":
 
 
 class TestKeyPlan(unittest.TestCase):
-    """The landmark drawing's page, and the distances facing it."""
+    """The landmark drawing, on the location page with the section's words."""
 
     @classmethod
     def setUpClass(cls):
         cls.doc = build_pdf.build_doc()
 
-    def test_the_drawing_has_a_page_to_itself(self):
-        # It is four parts wide to three tall on a landscape page, so the
-        # page height is what limits it and there is no column to spare.
-        page = self.doc[KEY_PLAN_PAGE]
+    def test_the_drawing_shares_the_location_page(self):
+        page = self.doc[LOCATION_PAGE]
         self.assertEqual(len(page.get_images()), 1)
+        text = _unligate(" ".join(page.get_text().split()))
+        title = next(s["title"] for s in EN.SECTIONS if s["id"] == "location")
+        self.assertIn(title, text)
 
-    def test_the_drawing_bleeds_to_both_paper_edges(self):
-        # The artwork is 16:9 and draws to its own edges. Inset into the
-        # margins it would lose a quarter of its width, and its labels are
-        # sized relative to that width, so the inset would cost legibility
-        # rather than buy composure.
-        page = self.doc[KEY_PLAN_PAGE]
+    def test_the_drawing_takes_every_point_the_words_leave_it(self):
+        # Its labels are sized relative to its width, so width is
+        # legibility: it fills the band under the prose rather than
+        # sitting in a column of its own.
+        page = self.doc[LOCATION_PAGE]
         rect = page.get_image_rects(page.get_images()[0][0])[0]
-        self.assertAlmostEqual(rect.x0, 0, places=1)
-        self.assertAlmostEqual(rect.x1, page.rect.width, places=1)
-        self.assertAlmostEqual(rect.y0, 0, places=1)
+        self.assertGreater(rect.width, 0.7 * page.rect.width)
+        self.assertAlmostEqual(rect.y1, build_pdf.FOOTER_TOP - 14, places=0)
+        self.assertAlmostEqual((rect.x0 + rect.x1) / 2,
+                               page.rect.width / 2, places=0)
+
+    def test_the_drawing_clears_the_prose_above_it(self):
+        page = self.doc[LOCATION_PAGE]
+        rect = page.get_image_rects(page.get_images()[0][0])[0]
+        prose = [b for b in page.get_text("blocks") if b[1] < rect.y0]
+        self.assertTrue(prose, "the prose is not above the drawing")
+        self.assertGreater(rect.y0, max(b[3] for b in prose),
+                           "the drawing prints through the prose")
 
     def test_the_drawing_keeps_its_own_proportions(self):
         # Stretched to fit, the pins would sit off the road they mark.
-        page = self.doc[KEY_PLAN_PAGE]
+        page = self.doc[LOCATION_PAGE]
         rect = page.get_image_rects(page.get_images()[0][0])[0]
         with Image.open(io.BytesIO(assets.key_plan_jpeg())) as art:
             self.assertAlmostEqual(rect.width / rect.height,
                                    art.width / art.height, places=2)
 
-    def test_the_drawing_clears_the_footer(self):
-        page = self.doc[KEY_PLAN_PAGE]
+    def test_the_drawing_is_a_link_to_the_directions(self):
+        # The page no longer carries a button, so the artwork is the way
+        # through to the map.
+        page = self.doc[LOCATION_PAGE]
         rect = page.get_image_rects(page.get_images()[0][0])[0]
-        self.assertLess(rect.y1, build_pdf.FOOTER_TOP - 40,
-                        "the drawing runs into the footer")
+        uris = [l["uri"] for l in page.get_links()
+                if l["kind"] == fitz.LINK_URI and rect.intersects(l["from"])]
+        self.assertIn(content.PROJECT["maps_url"], uris)
 
-    def test_the_drawing_page_carries_nothing_but_the_footer(self):
-        # The artwork pins the landmarks and prints the distances itself.
-        # A caption under it and a list facing it only said it again.
-        text = _unligate(" ".join(self.doc[KEY_PLAN_PAGE].get_text().split()))
-        for figure in ("2.3", "2.5", "4.2", "8.8", "9.7", "10.1", "13.8"):
-            self.assertNotIn(f"{figure} km", text,
-                             f"{figure} km is set as text over the drawing")
-
-    def test_the_location_page_no_longer_repeats_the_drawing(self):
+    def test_nothing_on_the_page_repeats_the_drawing(self):
         # Neither the distance columns nor the road/between/next-to
         # schedule: both were the key plan in another typeface.
         text = _unligate(" ".join(self.doc[LOCATION_PAGE].get_text().split()))
@@ -506,8 +509,9 @@ class TestKeyPlan(unittest.TestCase):
                       "Waghodia GIDC", "L&T Knowledge City", "Nimeta Garden",
                       "AATAPI Wonderland", "Vadodara Airport"):
             self.assertNotIn(place, text, f"{place} repeats beside the drawing")
-        self.assertIn(EN.UI["get_directions"], text,
-                      "the way there went with it")
+        for figure in ("2.3", "2.5", "4.2", "8.8", "9.7", "10.1", "13.8"):
+            self.assertNotIn(f"{figure} km", text,
+                             f"{figure} km is set as text beside the drawing")
 
 
 class TestDeterminism(unittest.TestCase):
