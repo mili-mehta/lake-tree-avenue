@@ -640,7 +640,8 @@ def _document(locale: str, words) -> str:
                + _shot("hero", ui["alt_hero"]) + "</div>")
     out.append('<div class="hero-panel"><div class="wrap">')
     out.append(f"<h1>{_esc(s['cover']['title'])}</h1>")
-    out.append(f'<p class="hero-sub">{_esc(s["cover"]["body"][0])}<br>'
+    out.append(f'<p class="hero-sub">{_esc(s["cover"]["lead"])}<br>'
+               f'{_esc(s["cover"]["body"][0])}<br>'
                f'{_esc(s["cover"]["body"][1])}</p>')
     out.append('<div class="actions">')
     out.append(f'<a class="btn" href="{wa}" target="_blank" rel="noopener">'
@@ -668,6 +669,9 @@ def _document(locale: str, words) -> str:
     out.append('<div class="hd measure">')
     out.append(f"<h2>{_esc(s['plans']['title'])}</h2>")
     out.append(f'<p class="lead">{_esc(s["plans"]["lead"])}</p></div>')
+    out.append('<div class="measure">')
+    out.extend(f"<p>{_esc(b)}</p>" for b in s["plans"]["body"])
+    out.append("</div>")
 
     # The elevation first, the plans under it: a buyer looks at the house
     # from the footpath before they look at where the kitchen is. The wrap
@@ -680,9 +684,11 @@ def _document(locale: str, words) -> str:
     out.append('<div class="wrap">')
     out.append(f'<p class="front-caption">{_esc(ui["front_view_caption"])}</p>')
     out.append('<div class="plans">')
-    out.append(f'<input type="radio" name="plan-{locale}" id="tab-a-{locale}">')
-    out.append(f'<input type="radio" name="plan-{locale}" id="tab-b-{locale}"'
+    # Plots 01-06 open first: the entrance row is the first thing a visitor
+    # walks past, and the two schedules differ by inches, not by layout.
+    out.append(f'<input type="radio" name="plan-{locale}" id="tab-a-{locale}"'
                " checked>")
+    out.append(f'<input type="radio" name="plan-{locale}" id="tab-b-{locale}">')
     out.append('<div class="plan-tabs">')
     for tab, unit_key in (("a", "A"), ("b", "B")):
         label = content.plots_label(content.UNIT_TYPES[unit_key], words)

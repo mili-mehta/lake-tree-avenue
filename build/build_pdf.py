@@ -341,8 +341,13 @@ def _cover(doc, art):
     lines = (
         (fitz.Rect(MARGIN, band_top + 8, 700, band_top + 42),
          content.PROJECT["name"], SERIF, 20, INK),
-        (fitz.Rect(MARGIN + 1, band_top + 44, 700, band_top + 70),
-         f"{art['words'].CREDIT}   /   {art['words'].UI['sheet_subtitle']}",
+        # The tagline rides the credit line rather than taking one of its
+        # own: the band is only as deep as the render leaves it, and a
+        # third line would be the first thing to fall off the page.
+        (fitz.Rect(MARGIN + 1, band_top + 44, 780, band_top + 70),
+         f"{art['sections']['cover']['lead']}   /   "
+         f"{art['words'].CREDIT}   /   "
+         f"{art['words'].UI['sheet_subtitle']}",
          SANS, 10, INK_SOFT),
     )
     for rect, text, font, size, color in lines:
@@ -420,7 +425,7 @@ PLAN_TEXT_GAP = 34.0
 PLAN_IMAGE_W = PAGE_SIZE[0] - 2 * MARGIN - PLAN_TEXT_GAP - PLAN_TEXT_W
 
 
-def _plan_page(doc, art, *, unit, caption, blob, rows):
+def _plan_page(doc, art, *, unit, caption, blob, rows, prose=False):
     """One drawing at the largest size the page allows, its schedule beside.
 
     The plans are the one page a buyer zooms into, so the drawing takes the
@@ -443,8 +448,25 @@ def _plan_page(doc, art, *, unit, caption, blob, rows):
           font=SANS_BOLD, size=9.5, color=TERRA_DEEP)
     _text(page, fitz.Rect(tx, MARGIN + 60, tx + tw, MARGIN + 86), caption,
           font=SERIF, size=15, color=INK_SOFT)
-    _schedule(page, rows, tx, MARGIN + 100, tw,
-              label_w=138.0, size=9.5, pitch=26.0)
+    y = _schedule(page, rows, tx, MARGIN + 100, tw,
+                  label_w=138.0, size=9.5, pitch=26.0)
+
+    # The section's lead and body, under the schedule of the first sheet
+    # only. A reader of the PDF is owed every word the page carries, and
+    # the column below the ground floor schedule is where the plans
+    # begin; repeating the prose on all four sheets would only make the
+    # other three look like they had something new to say.
+    if prose:
+        s_plans = art["sections"]["plans"]
+        y += 22
+        _line(page, tx, y - 10, tx + tw)
+        text = s_plans["lead"] + "\n\n" + "\n\n".join(s_plans["body"])
+        spare = _text(page, fitz.Rect(tx, y, tx + tw, FOOTER_TOP - 10), text,
+                      font=SERIF, size=9.5, color=INK_SOFT, leading=1.45)
+        if spare < 0:
+            raise LayoutOverflow(
+                f"the plans prose overflows the {tw:.0f} pt schedule column "
+                f"by {abs(spare):.1f} pt")
     _footer(page, art["words"])
     return page
 
@@ -464,7 +486,8 @@ def _plans(doc, art):
                 doc, dict(art, unit_key=key), unit=unit,
                 caption=words.SHEET_CAPTIONS[sheet["key"]],
                 blob=art["sheet_%s_%s" % (key, sheet["key"])],
-                rows=content.sheet_rows(unit, sheet, words)))
+                rows=content.sheet_rows(unit, sheet, words),
+                prose=not pages))
     return pages
 
 
@@ -503,6 +526,17 @@ def _layout(doc, art):
     _text(page, fitz.Rect(tx, MARGIN + 188, tx + tw, MARGIN + 290),
           _layout_key(art["words"]),
           font=SANS, size=9, color=INK_SOFT, leading=1.5)
+
+    # The drawing is an issued sheet, and the web page frames it as one.
+    # The PDF names it the same way, under the key, so a reader who is
+    # sent the file is looking at a titled sheet rather than a picture.
+    ui = art["words"].UI
+    _line(page, tx, MARGIN + 320, tx + tw)
+    _text(page, fitz.Rect(tx, MARGIN + 328, tx + tw, MARGIN + 350),
+          ui["layout_plan"], font=SANS_BOLD, size=9.5, color=TERRA_DEEP)
+    _text(page, fitz.Rect(tx, MARGIN + 346, tx + tw, MARGIN + 390),
+          ui["sheet_subtitle"], font=SERIF, size=9.5, color=INK_SOFT,
+          leading=1.4)
     _footer(page, art["words"])
     return page
 
@@ -581,12 +615,20 @@ def _location(doc, art):
             raise LayoutOverflow(f"the location prose at {x:.0f} pt overflows")
         y = max(y, MARGIN + (box.height - spare))
 
+    # The drawing is labelled rather than left to explain itself: on the
+    # web page the same words stand over the same artwork, and a reader
+    # given the PDF instead should not be the one who has to guess what
+    # the pins either side of the gate are.
+    _text(page, fitz.Rect(MARGIN, y + 6, MARGIN + 300, y + 24),
+          art["words"].UI["key_plan_subtitle"],
+          font=SANS_BOLD, size=9.5, color=TERRA_DEEP)
+
     # The way there is in the footer of every page, so the page does not
     # also need a button for it -- but the drawing is a picture, and a
     # reader who wants directions off this page should not have to find
     # the strip, so the artwork itself carries the link.
     rect = _place_image(page, art["key_plan"],
-                        fitz.Rect(0, y + 16, PAGE_SIZE[0], FOOTER_TOP - 14))
+                        fitz.Rect(0, y + 28, PAGE_SIZE[0], FOOTER_TOP - 14))
     page.insert_link({"kind": fitz.LINK_URI, "from": rect,
                       "uri": p["maps_url"]})
     _footer(page, art["words"])

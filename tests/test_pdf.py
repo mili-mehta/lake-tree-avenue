@@ -214,6 +214,24 @@ class TestPdf(unittest.TestCase):
                              f"page {i+1} repeats the drawing on page {seen.get(xrefs, 0)+1}")
             seen[xrefs] = i
 
+    def test_every_section_lead_and_body_reaches_the_pdf(self):
+        """What the web page says, the file a buyer is sent says too.
+
+        Most buyers are forwarded the PDF rather than the link, so a
+        paragraph that exists only in the HTML is a paragraph most
+        readers never see. The plans lead and body were exactly that
+        until the first plan page took them, and nothing in the build
+        would have said so.
+        """
+        text = " ".join(p.get_text() for p in self.doc)
+        flat = _unligate(" ".join(text.split()))
+        for section in EN.SECTIONS:
+            for key in ("lead", "body"):
+                values = section[key]
+                for value in ((values,) if isinstance(values, str) else values):
+                    self.assertIn(" ".join(value.split()), flat,
+                                  f"the {section['id']} {key} is not in the PDF")
+
     def test_every_specification_group_appears_in_full(self):
         text = " ".join(p.get_text() for p in self.doc)
         flat = _unligate(" ".join(text.split()))

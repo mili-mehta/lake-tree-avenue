@@ -134,6 +134,8 @@ SECTIONS = (
         "body": (
             "Lake Tree Avenue is a gated campus of 48 two-bedroom townhouses, "
             "each with its own entrance and parking.",
+            "It has the privacy of an independent home, without feeling cut "
+            "off from a neighbourhood.",
             "A 12-metre town planning road brings you to the gate. Inside, "
             "7.5-metre internal roads reach every door.",
             "Two plan types: six homes in the entrance row, forty-two along the "
@@ -143,9 +145,12 @@ SECTIONS = (
     {
         "id": "plans",
         "title": "Floor plans",
-        "lead": "Ground and first floor, every room dimensioned.",
-        "body": ("Living and dining with the kitchen at ground level, both "
-                 "bedrooms above, and the full terrace over them.",),
+        "lead": "See how your home comes together, floor by floor.",
+        "body": ("Every area on the ground and first floor is clearly "
+                 "dimensioned, so you can understand the space, picture your "
+                 "furniture, and start imagining how life here could feel.",
+                 "Living and dining with the kitchen at ground level, both "
+                 "bedrooms above, and the full terrace over them."),
     },
     {
         "id": "layout",
@@ -226,9 +231,10 @@ UI = {
     "alt_logo": "Lake Tree Avenue",
     "alt_site_plan": ("Site plan showing 48 numbered plots, the internal "
                       "roads, the common plot and the entry gate"),
-    "front_view_subtitle": "The homes from the street",
-    "front_view_caption": ("Exposed brick, a balcony over the door, "
-                           "your own terrace above it."),
+    "front_view_subtitle": "This is what coming home looks like.",
+    "front_view_caption": ("Step out onto your balcony in the morning, and "
+                           "head upstairs to your bedrooms or a private "
+                           "terrace that is completely yours."),
     "alt_front_view": ("Front elevation of four Lake Tree Avenue townhouses "
                        "at dusk: exposed brick and grey facades, a balcony "
                        "over each timber front door, lit windows, terrace "

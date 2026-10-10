@@ -210,11 +210,26 @@ class TestStructure(unittest.TestCase):
             self.assertNotIn("Plot width", rooms, f"Type {key}")
             self.assertNotIn("Plot depth", rooms, f"Type {key}")
 
-    def test_no_private_terrace_is_claimed(self):
+    def test_no_private_terrace_is_scheduled_or_specified(self):
+        """The issued facts do not list a private terrace; the prose may.
+
+        The developer struck "private terrace" from the Also row and
+        "ground, first and private terrace" from Levels: the schedule
+        states what the sheets state, and the sheets state two floors.
+        The elevation caption calls the terrace private on the client's
+        instruction, so the guard now covers the surfaces that quote the
+        developer -- the schedule, the specification, the room labels and
+        the room values -- and leaves the prose to the client.
+        """
         for code in copy.LOCALES:
             words = copy.for_locale(code)
-            blob = " ".join(text for _, text in copy.strings(words))
-            blob += " ".join(words.ROOM_VALUE_WORDS.values())
+            issued = list(words.ROOM_VALUE_WORDS.values())
+            issued += list(words.ROOM_LABELS.values())
+            issued += [f"{label} {value}"
+                       for label, value in words.PROJECT_SCHEDULE]
+            issued += [f"{label} {text}" for label, text in words.SPEC_GROUPS]
+            issued += list(words.AMENITIES)
+            blob = " ".join(issued)
             for term in ("private terrace", "निजी टेरेस", "ખાનગી ટેરેસ"):
                 self.assertNotIn(term, blob, code)
 
