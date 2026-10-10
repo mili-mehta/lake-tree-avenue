@@ -141,6 +141,18 @@ section { padding: 84px 0; }
 .schedule td { font-variant-numeric: tabular-nums; }
 
 /* ---------- plans: CSS-only toggle ---------- */
+/* The front elevation, edge to edge, ahead of the plans. Unwrapped for the
+   same reason the key plan is: it is a band of facades, and a column sized
+   for prose would crop it back to a thumbnail of one door. */
+.front-figure { margin: 26px 0 0; }
+/* A label straight under a section heading needs less air than one that
+   follows a column of prose, which is what .dim's own margin is set for. */
+.hd + .dim { margin-top: 8px; }
+.front-caption {
+  font-family: var(--sans); font-size: 0.84rem; color: var(--ink-soft);
+  margin: 16px 0 34px;
+}
+
 .plans input { position: absolute; opacity: 0; pointer-events: none; }
 .plan-tabs { display: flex; gap: 8px; margin-bottom: 26px; flex-wrap: wrap; }
 .plan-tabs label {
@@ -227,6 +239,19 @@ section { padding: 84px 0; }
 .contact-grid p { color: var(--ink); }
 .contact-grid a { text-decoration: none; }
 
+/* ---------- disclaimers ----------
+   The legal block, set as the small print it is: an ordered list, because
+   the clauses are numbered where they are quoted, and the numbers have to
+   survive a reader pointing at "clause 4". Smaller and quieter than the
+   selling copy around it, never so small it cannot be read on a phone. */
+.disclaimers { margin: 30px 0 0; padding-left: 1.6em; color: var(--ink-soft);
+  font-size: 0.92rem; line-height: 1.6; }
+.disclaimers li { padding-left: 4px; margin-bottom: 0.85em;
+  break-inside: avoid; }
+.disclaimers li:last-child { margin-bottom: 0; }
+.disclaimers li::marker { font-family: var(--sans); font-weight: 600;
+  color: var(--terra-deep); }
+
 footer { padding: 46px 0 120px; border-top: 1px solid var(--rule);
   font-family: var(--sans); font-size: 0.86rem; color: var(--ink-soft); }
 footer img { width: 128px; margin-bottom: 18px; }
@@ -256,6 +281,9 @@ footer img { width: 128px; margin-bottom: 18px; }
   .spec-list div { grid-template-columns: 210px 1fr; gap: 26px; }
   .amenities { columns: 2; }
   .contact-grid { grid-template-columns: repeat(3, 1fr); gap: 44px; }
+  /* Seven clauses in one column is a wall; two columns keeps the block
+     one screen deep without shrinking the type. */
+  .disclaimers { columns: 2; column-gap: 54px; }
   .bar { display: none; }
   footer { padding-bottom: 60px; }
 }
@@ -445,6 +473,7 @@ def _icon(name: str, size: int = 20, *, mono: bool = False) -> str:
 def _imagery() -> dict:
     out = {
         "hero": (assets.render_jpeg(1600), "image/jpeg"),
+        "front-view": (assets.front_view_jpeg(1600), "image/jpeg"),
         "site-plan": (assets.site_plan_jpeg(1500), "image/jpeg"),
         "key-plan": (assets.key_plan_jpeg(), "image/jpeg"),
         "logo": (assets.logo_png(260), "image/png"),
@@ -639,6 +668,17 @@ def _document(locale: str, words) -> str:
     out.append('<div class="hd measure">')
     out.append(f"<h2>{_esc(s['plans']['title'])}</h2>")
     out.append(f'<p class="lead">{_esc(s["plans"]["lead"])}</p></div>')
+
+    # The elevation first, the plans under it: a buyer looks at the house
+    # from the footpath before they look at where the kitchen is. The wrap
+    # closes around it and reopens after, so the picture spans the viewport
+    # while the caption and the tabs keep their column.
+    out.append(f'<div class="dim"><span>{_esc(ui["front_view_subtitle"])}'
+               f'</span></div></div>')
+    out.append('<div class="front-figure">'
+               + _shot("front-view", ui["alt_front_view"]) + "</div>")
+    out.append('<div class="wrap">')
+    out.append(f'<p class="front-caption">{_esc(ui["front_view_caption"])}</p>')
     out.append('<div class="plans">')
     out.append(f'<input type="radio" name="plan-{locale}" id="tab-a-{locale}">')
     out.append(f'<input type="radio" name="plan-{locale}" id="tab-b-{locale}"'
@@ -780,6 +820,18 @@ def _document(locale: str, words) -> str:
     out.append(f'<a class="btn btn-quiet" href="{PDF_NAMES[locale]}" '
                f'download>{_icon("sheet")}{_esc(ui["download_pdf"])}</a>')
     out.append("</div>")
+    out.append("</div></section>")
+
+    # disclaimers -- the brochure's last word before the footer, because
+    # they qualify everything above them and nothing below.
+    out.append(f'<section class="band" id="{sid("disclaimers")}">'
+               '<div class="wrap">')
+    out.append('<div class="hd measure">')
+    out.append(f"<h2>{_esc(s['disclaimers']['title'])}</h2>")
+    out.append(f'<p class="lead">{_esc(s["disclaimers"]["lead"])}</p></div>')
+    out.append('<ol class="disclaimers">')
+    out.extend(f"<li>{_esc(d)}</li>" for d in words.DISCLAIMERS)
+    out.append("</ol>")
     out.append("</div></section>")
 
     # footer

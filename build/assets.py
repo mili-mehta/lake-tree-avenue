@@ -14,6 +14,10 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LOGO_SRC = os.path.join(ROOT, "images", "Lake Tree Avenue new-Logo.png")
 RENDER_SRC = os.path.join(ROOT, "images",
                           "lake-tree-avenue-street-view-hero-image.png")
+# The same homes seen flat on, one bay per house. The hero sells the street;
+# this sells the house, which is why it leads the floor plans rather than
+# the cover.
+FRONT_SRC = os.path.join(ROOT, "images", "lake-tree-avenue-front-view.png")
 LAYOUT_SRC = os.path.join(ROOT, "REV.LAYOUT - 07-10-2026.pdf")
 SITE_PLAN_SRC = os.path.join(ROOT, "images",
                              "lake-tree-avenue-Layout Plan.png")
@@ -40,6 +44,11 @@ _WHITE = 247  # a channel value above this counts as blank paper
 # project name and the credit line. Shallower than this and the PDF
 # cover has nowhere to set them.
 RENDER_ASPECT = 1.8
+
+# The elevation arrives with sky above the parapet and road below the kerb,
+# and a buyer is buying neither. Cropped to this it is a band of facades --
+# doors, balconies, terrace railings -- which is the whole of what it says.
+FRONT_ASPECT = 1.7
 
 # The drawing sheet carries the site plan in its upper two thirds and a strip
 # of floor plans below. The brochure shows the floor plans from their own
@@ -108,6 +117,24 @@ def render_jpeg(width: int = 1600, quality: int = 78) -> bytes:
     img = _trim_white(img)
     keep = min(img.height, round(img.width / RENDER_ASPECT))
     img = img.crop((0, img.height - keep, img.width, img.height))
+    ratio = width / img.width
+    img = img.resize((width, max(1, round(img.height * ratio))), Image.LANCZOS)
+    return _encode(img, "JPEG", quality=quality, optimize=True, progressive=True)
+
+
+def front_view_jpeg(width: int = 1600, quality: int = 80) -> bytes:
+    """The front elevation, cropped to the band of facades.
+
+    Centred rather than cropped from one edge: the facades sit across the
+    middle of the frame, so sky and road come off in equal measure. Quality
+    runs above the street view because this one is read close -- the brick
+    course and the window frames are what a buyer looks for in it.
+    """
+    img = Image.open(FRONT_SRC).convert("RGB")
+    img = _trim_white(img)
+    keep = min(img.height, round(img.width / FRONT_ASPECT))
+    top = (img.height - keep) // 2
+    img = img.crop((0, top, img.width, top + keep))
     ratio = width / img.width
     img = img.resize((width, max(1, round(img.height * ratio))), Image.LANCZOS)
     return _encode(img, "JPEG", quality=quality, optimize=True, progressive=True)

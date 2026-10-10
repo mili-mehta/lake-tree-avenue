@@ -182,8 +182,13 @@ def _text(page, rect, text, *, font=SERIF, size=11, color=INK, align=0,
     return spare
 
 
-def _crop_to_aspect(blob: bytes, aspect: float) -> bytes:
-    """Centre-crop an encoded image to width/height == aspect."""
+def _crop_to_aspect(blob: bytes, aspect: float, *, bias: float = 0.5) -> bytes:
+    """Crop an encoded image to width/height == aspect.
+
+    `bias` is where the kept band sits vertically: 0.5 centres it, lower
+    values keep more of the top. A render whose subject is a building wants
+    the parapet more than it wants the road in front of it.
+    """
     img = Image.open(io.BytesIO(blob)).convert("RGB")
     w, h = img.size
     if w / h > aspect:
@@ -192,7 +197,7 @@ def _crop_to_aspect(blob: bytes, aspect: float) -> bytes:
         img = img.crop((left, 0, left + new_w, h))
     else:
         new_h = round(w / aspect)
-        top = (h - new_h) // 2
+        top = round((h - new_h) * bias)
         img = img.crop((0, top, w, top + new_h))
     buf = io.BytesIO()
     img.save(buf, "JPEG", quality=82, optimize=True)
@@ -359,6 +364,48 @@ def _project(doc, art):
           font=SERIF, size=10.5, color=INK, leading=1.45)
     _schedule(page, art["words"].PROJECT_SCHEDULE,
               440.0, y, PAGE_SIZE[0] - MARGIN - 440.0, label_w=120.0)
+    _footer(page, art["words"])
+    return page
+
+
+# The elevation plate: a sand band carrying the line, the picture bleeding
+# to the left, right and bottom edges under it. The depth is what the band
+# leaves, and the picture is cropped to exactly that rather than fitted
+# inside it -- a letterboxed render with sand down both sides would read as
+# a mistake on a page whose whole job is the house.
+ELEVATION_TOP = 150.0
+
+
+def _elevation(doc, art):
+    """The house from the footpath, ahead of the four plan pages.
+
+    The cover is the avenue in perspective: a street, a address, a mood.
+    This is the same homes flat on, one bay per house, which is the first
+    thing a buyer actually measures themself against -- their door, their
+    balcony, their terrace. It leads the plans because that is the order
+    a visit happens in: the front first, then inside.
+    """
+    page = _page(doc)
+    ui = art["words"].UI
+    _fill(page, fitz.Rect(0, 0, PAGE_SIZE[0], PAGE_SIZE[1]), SAND)
+
+    box = fitz.Rect(MARGIN, MARGIN, PAGE_SIZE[0] - MARGIN, ELEVATION_TOP - 10)
+    if _text(page, box, ui["front_view_subtitle"], font=SERIF, size=25,
+             color=INK) < 0:
+        raise LayoutOverflow(
+            f"elevation title {ui['front_view_subtitle']!r} does not fit")
+    cap = fitz.Rect(MARGIN, MARGIN + 36, PAGE_SIZE[0] - MARGIN,
+                    ELEVATION_TOP - 8)
+    if _text(page, cap, ui["front_view_caption"], font=SERIF, size=11.5,
+             color=INK_SOFT) < 0:
+        raise LayoutOverflow(
+            f"elevation caption {ui['front_view_caption']!r} does not fit")
+
+    rect = fitz.Rect(0, ELEVATION_TOP, PAGE_SIZE[0], FOOTER_TOP)
+    # Biased upward: centred, the band cut through the terrace railings and
+    # kept a third of a page of empty road instead.
+    page.insert_image(rect, stream=_crop_to_aspect(
+        art["front"], rect.width / rect.height, bias=0.28))
     _footer(page, art["words"])
     return page
 
@@ -607,11 +654,65 @@ def _contact(doc, art):
     return page
 
 
+# The deepest box one clause may take before the build is failed. Four
+# lines of English, six of Gujarati -- generous, and still well short of
+# the half page that would mean a clause had been rewritten into an essay.
+DISCLAIMER_BOX = 150.0
+
+
+def _disclaimers(doc, art):
+    """The seven clauses, numbered, closing the brochure.
+
+    A page of its own rather than a strip under the contact details: this
+    is the one block in the brochure whose exact wording matters legally,
+    and a clause that had to be shortened to fit beside something else
+    would be a clause the owner never issued.
+
+    Every clause is measured and the build fails if one did not fit, the
+    same contract the specifications page has. insert_htmlbox writes only
+    what fits, so an unchecked overflow would publish half a sentence --
+    and a disclaimer that stops mid-sentence is worse than none.
+    """
+    page = _page(doc)
+    s = art["sections"]["disclaimers"]
+    words = art["words"]
+    # Optically centred like the project page rather than pinned to the
+    # top margin: a block of small print hung from the top of an A4
+    # landscape page leaves a third of the sheet blank under it.
+    y = _heading(page, s["title"], s["lead"], y=158.0, width=430.0)
+
+    items = words.DISCLAIMERS
+    col_w = (PAGE_SIZE[0] - 2 * MARGIN - 40) / 2
+    half = (len(items) + 1) // 2  # four clauses, then three
+    for col, chunk in enumerate((items[:half], items[half:])):
+        x = MARGIN + col * (col_w + 40)
+        cy = y
+        for i, text in enumerate(chunk):
+            number = f"{col * half + i + 1}."
+            _text(page, fitz.Rect(x, cy, x + 18, cy + 18), number,
+                  font=SANS_BOLD, size=9, color=TERRA_DEEP)
+            box = fitz.Rect(x + 20, cy, x + col_w, cy + DISCLAIMER_BOX)
+            remaining = _text(page, box, text, font=SERIF, size=9.5,
+                              color=INK, leading=1.45)
+            if remaining < 0:
+                raise LayoutOverflow(
+                    f"disclaimer {number} does not fit its box "
+                    f"(short by {abs(remaining):.1f} pt)")
+            cy += (DISCLAIMER_BOX - remaining) + 11
+            if cy > FOOTER_TOP - 6:
+                raise LayoutOverflow(
+                    f"disclaimer {number} ends at {cy:.0f} pt, past the "
+                    f"footer at {FOOTER_TOP:.0f} pt")
+    _footer(page, words)
+    return page
+
+
 def build_doc(locale: str = copy.DEFAULT) -> fitz.Document:
     words = copy.for_locale(locale)
     art = {
         "logo": assets.logo_png(420),
         "render": assets.render_jpeg(1800),
+        "front": assets.front_view_jpeg(1800),
         "site": assets.site_plan_jpeg(1500),
         "key_plan": assets.key_plan_jpeg(),
         "sections": {s["id"]: s for s in words.SECTIONS},
@@ -623,8 +724,9 @@ def build_doc(locale: str = copy.DEFAULT) -> fitz.Document:
             art[f"sheet_{key}_{floor}"] = blob
     doc = fitz.open()
     with _using(locale):
-        for builder in (_cover, _project, _plans,
-                        _layout, _specs, _location, _contact):
+        for builder in (_cover, _project, _elevation, _plans,
+                        _layout, _specs, _location, _contact,
+                        _disclaimers):
             builder(doc, art)
     doc.set_metadata({
         "title": content.PROJECT["name"],

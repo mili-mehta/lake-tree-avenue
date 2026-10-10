@@ -23,16 +23,19 @@ def _unligate(text: str) -> str:
         text = text.replace(glyph, letters)
     return text
 
-# cover, project, then a page per floor per type, then
-# layout, specs, location (prose and the key plan together), contact
-PLAN_PAGES = {"A": (2, 3), "B": (4, 5)}
+# cover, project, the front elevation, then a page per floor per type,
+# then layout, specs, location (prose and the key plan together), contact
+ELEVATION_PAGE = 2
+PLAN_PAGES = {"A": (3, 4), "B": (5, 6)}
 GROUND_PAGE = {key: pages[0] for key, pages in PLAN_PAGES.items()}
 FIRST_PAGE = {key: pages[1] for key, pages in PLAN_PAGES.items()}
 ALL_PLAN_PAGES = [i for pages in PLAN_PAGES.values() for i in pages]
-LAYOUT_PAGE = 6
-SPECS_PAGE = 7
-LOCATION_PAGE = 8
-CONTACT_PAGE = 9
+LAYOUT_PAGE = 7
+SPECS_PAGE = 8
+LOCATION_PAGE = 9
+CONTACT_PAGE = 10
+# The disclaimers close the brochure: they qualify every page before them.
+DISCLAIMERS_PAGE = 11
 
 
 class TestPdf(unittest.TestCase):
@@ -47,11 +50,11 @@ class TestPdf(unittest.TestCase):
     def tearDownClass(cls):
         os.unlink(cls.path)
 
-    def test_ten_pages_a4_landscape(self):
+    def test_twelve_pages_a4_landscape(self):
         # Both types take a page per floor. Two sheets sharing one page
         # shrink to roughly half the width, and at that size the room
         # dimensions printed inside them stop being readable.
-        self.assertEqual(self.doc.page_count, 10)
+        self.assertEqual(self.doc.page_count, 12)
         for page in self.doc:
             self.assertAlmostEqual(page.rect.width, 842.0, places=0)
             self.assertAlmostEqual(page.rect.height, 595.0, places=0)
@@ -93,7 +96,7 @@ class TestPdf(unittest.TestCase):
         self.assertIn(content.PROJECT["website_display"], text)
 
     def test_contact_page_links_each_social_profile_by_handle(self):
-        page = self.doc[-1]  # contact closes the brochure
+        page = self.doc[CONTACT_PAGE]
         uris = self._uris(page)
         for key in ("instagram_url", "facebook_url"):
             self.assertIn(content.PROJECT[key], uris,
@@ -218,6 +221,38 @@ class TestPdf(unittest.TestCase):
             self.assertIn(" ".join(body.split()), flat,
                           f"{label} copy is cut short")
 
+    def test_every_disclaimer_appears_in_full_on_its_own_page(self):
+        # The clauses are the one block here whose exact wording the owner
+        # is held to. A clause that wrapped out of its box would print as
+        # far as it fit and stop, which is how a brochure ends up
+        # promising something the developer never wrote.
+        flat = _unligate(" ".join(
+            self.doc[DISCLAIMERS_PAGE].get_text().split()))
+        for i, clause in enumerate(EN.DISCLAIMERS, 1):
+            self.assertIn(" ".join(clause.split()), flat,
+                          f"disclaimer {i} is cut short or missing")
+
+    def test_the_disclaimers_are_numbered_the_way_they_were_issued(self):
+        # They are quoted by number -- "clause 4" -- so the numbers are
+        # part of the copy, not decoration, and they run 1 to 7 in order
+        # down the left column and on into the right.
+        text = self.doc[DISCLAIMERS_PAGE].get_text()
+        numbers = [n for n in re.findall(r"(?m)^(\d)\.$", text)]
+        self.assertEqual(numbers, [str(i) for i in range(1, 8)])
+
+    def test_a_disclaimer_that_outgrows_its_box_fails_the_build(self):
+        import unittest.mock
+        long_clause = EN.DISCLAIMERS[0] + " " + ("Further, " + EN.DISCLAIMERS[4]) * 4
+        clauses = (long_clause,) + EN.DISCLAIMERS[1:]
+        with unittest.mock.patch.object(EN, "DISCLAIMERS", clauses):
+            with self.assertRaises(build_pdf.LayoutOverflow):
+                build_pdf.build_doc()
+
+    def test_the_disclaimers_page_carries_nothing_but_the_footer_links(self):
+        # Nothing to tap here: a legal page with a WhatsApp button in the
+        # middle of it reads as a sales page with small print.
+        self.assertEqual(len(self.doc[DISCLAIMERS_PAGE].get_links()), 5)
+
     def test_no_price_in_extracted_text(self):
         text = "\n".join(p.get_text() for p in self.doc)
         self.assertIsNone(re.search(r"(₹|Rs\.?\s*\d)", text))
@@ -327,12 +362,12 @@ class TestEveryLanguage(unittest.TestCase):
             doc.close()
             os.unlink(cls.paths[locale])
 
-    def test_every_language_builds_the_same_ten_pages(self):
+    def test_every_language_builds_the_same_twelve_pages(self):
         # A LayoutOverflow during the build is the real assertion here:
         # Devanagari runs longer than English, and a box tuned for the
         # English would drop the tail of a sentence.
         for locale, doc in self.docs.items():
-            self.assertEqual(doc.page_count, 10, locale)
+            self.assertEqual(doc.page_count, 12, locale)
 
     def test_every_indic_character_has_a_glyph(self):
         # A font missing one conjunct still renders the line, with a hole

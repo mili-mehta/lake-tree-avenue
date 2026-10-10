@@ -46,7 +46,7 @@ PROJECT = {
 # The sections, in the order both renderers lay them out. The titles and
 # the prose are per language; only the running order is shared.
 SECTION_IDS = ("cover", "project", "plans", "layout", "specs", "location",
-               "contact")
+               "contact", "disclaimers")
 
 # Internal only. The owner credits the firm, never the individuals, so these
 # names must never reach a buyer-facing artefact. Bare surnames are listed too

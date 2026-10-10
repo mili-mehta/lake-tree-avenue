@@ -303,6 +303,57 @@ class TestHtml(unittest.TestCase):
         self.assertLess(len(self.html.encode("utf-8")), 6 * 1024 * 1024)
 
 
+class TestDisclaimers(unittest.TestCase):
+    """The legal block, which has to be complete in all three documents."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.html = build_html.render_html()
+        cls.markup = re.sub(r"data:[a-z0-9/+.-]+;base64,[A-Za-z0-9+/=]+",
+                            "DATA", cls.html)
+
+    def _list(self, locale):
+        doc = build_html.doc(self.markup, locale)
+        return doc.split('<ol class="disclaimers">')[1].split("</ol>")[0]
+
+    def test_every_language_prints_all_seven_clauses_verbatim(self):
+        # Not a sample of them, and not a paraphrase: the clause a buyer
+        # reads has to be the clause the developer issued, in the language
+        # that buyer switched to.
+        for locale in copy.LOCALES:
+            words = copy.for_locale(locale)
+            items = re.findall(r"<li>(.*?)</li>", self._list(locale), re.S)
+            self.assertEqual(len(items), 7, locale)
+            for i, (rendered, clause) in enumerate(zip(items, words.DISCLAIMERS), 1):
+                self.assertEqual(rendered, build_html._esc(clause),
+                                 f"{locale} clause {i} does not match the copy")
+
+    def test_the_clauses_are_an_ordered_list_so_they_keep_their_numbers(self):
+        # They are quoted by number. A <ul> would drop the numbering, and
+        # CSS counters would drop it again the moment the page is printed
+        # or read out by a screen reader.
+        for locale in copy.LOCALES:
+            self.assertIn('<ol class="disclaimers">',
+                          build_html.doc(self.markup, locale), locale)
+
+    def test_the_disclaimers_close_the_brochure(self):
+        # They qualify everything above them, so they come after the last
+        # section and before the footer.
+        for locale in copy.LOCALES:
+            doc = build_html.doc(self.markup, locale)
+            self.assertLess(doc.index(f'id="{locale}-contact"'),
+                            doc.index(f'id="{locale}-disclaimers"'), locale)
+            self.assertLess(doc.index(f'id="{locale}-disclaimers"'),
+                            doc.index("<footer>"), locale)
+
+    def test_the_small_print_is_still_readable(self):
+        # Small print, not unreadable print: a legal block set below the
+        # body size still has to be legible on a phone.
+        rule = re.search(r"\.disclaimers \{([^}]*)\}", build_html.CSS).group(1)
+        size = float(re.search(r"font-size: ([0-9.]+)rem", rule).group(1))
+        self.assertGreaterEqual(size, 0.85)
+
+
 class TestKeyPlan(unittest.TestCase):
     """The landmark drawing, which now stands on its own.
 

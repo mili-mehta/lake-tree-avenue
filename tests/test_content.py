@@ -112,10 +112,11 @@ class TestSupersededFacts(unittest.TestCase):
 
 
 class TestStructure(unittest.TestCase):
-    def test_seven_sections_in_spec_order(self):
+    def test_eight_sections_in_spec_order(self):
         self.assertEqual(list(content.SECTION_IDS),
                          ["cover", "project", "plans",
-                          "layout", "specs", "location", "contact"])
+                          "layout", "specs", "location", "contact",
+                          "disclaimers"])
         for code in copy.LOCALES:
             ids = [s["id"] for s in copy.for_locale(code).SECTIONS]
             self.assertEqual(ids, list(content.SECTION_IDS), code)

@@ -16,6 +16,10 @@ LATIN_OK = (
     "Office", "info@laketreeavenue.com", "@laketreeavenue",
     "laketreeavenue.com",
     "AC", "PDF", "Tremix",
+    # The two abbreviations in the disclaimers. A buyer in Vadodara reads
+    # both in Latin on every bill and receipt they already hold, and a
+    # transliterated "जी.एस.टी." would be a tax nobody recognises.
+    "GST", "G.E.B.",
 )
 
 DEVANAGARI = r"ऀ-ॿ"
@@ -79,6 +83,20 @@ class TestCopyParity(unittest.TestCase):
                              len(copy.for_locale("en").PROJECT_SCHEDULE), code)
             self.assertEqual(len(words.SPEC_GROUPS), 9, code)
             self.assertEqual(len(words.AMENITIES), 6, code)
+
+    def test_every_language_carries_all_seven_disclaimers(self):
+        # The one block of copy here that is a legal statement. A clause
+        # that went missing from the Gujarati document would be a clause
+        # the Gujarati buyer was never shown, so the count is checked
+        # rather than assumed -- and a clause is never merged into its
+        # neighbour to make the count up, which is why each one is also
+        # required to end in a full stop or a danda.
+        for code in copy.LOCALES:
+            clauses = copy.for_locale(code).DISCLAIMERS
+            self.assertEqual(len(clauses), 7, code)
+            for i, clause in enumerate(clauses, 1):
+                self.assertRegex(clause, r"[.।]$", f"{code} clause {i}")
+                self.assertGreater(len(clause), 40, f"{code} clause {i}")
 
 
 class TestCopyIsActuallyTranslated(unittest.TestCase):

@@ -87,6 +87,38 @@ AMENITIES = (
     "Rain water harvesting system",
 )
 
+# The disclaimers, as the developer issued them, in the order they were
+# issued. They are the one block of copy in this brochure that is a legal
+# statement rather than a selling line, so nothing here is shortened,
+# merged or paraphrased in any language: the Hindi and the Gujarati carry
+# the same seven clauses, each saying what its English clause says.
+#
+# A tuple, not prose, so tests/test_copy.py can hold all three languages
+# to the same count -- a missing clause is the one error here that would
+# cost the owner rather than merely read badly.
+DISCLAIMERS = (
+    "Standard-quality materials shall be used for all construction work. "
+    "The developer reserves the right to make changes to dimensions, "
+    "designs, and specifications, and such changes shall be binding on all "
+    "members. External alterations or modifications shall be strictly "
+    "prohibited.",
+    "Development charges, GST, documentation charges, stamp duty, G.E.B. "
+    "meter deposit, and other applicable charges shall be payable "
+    "separately.",
+    "Each member shall be required to pay maintenance charges separately, "
+    "as applicable.",
+    "Possession shall be handed over within one month after the full and "
+    "final settlement of all outstanding dues and accounts.",
+    "Any additional or extra work requested by the client shall be carried "
+    "out at the client's cost. A prior estimate shall be provided, and the "
+    "applicable amount shall be payable in advance.",
+    "The developer reserves the full right to make any changes as may be "
+    "necessary.",
+    "This brochure does not form part of any agreement or legal document. "
+    "It is intended solely for the general presentation and illustration "
+    "of the project.",
+)
+
 SECTIONS = (
     {
         "id": "cover",
@@ -147,6 +179,12 @@ SECTIONS = (
         "body": ("Site visits daily. Call or send a message on WhatsApp and we "
                  "will share directions.",),
     },
+    {
+        "id": "disclaimers",
+        "title": "Disclaimers",
+        "lead": "Please read these before you book.",
+        "body": (),
+    },
 )
 
 UI = {
@@ -188,6 +226,14 @@ UI = {
     "alt_logo": "Lake Tree Avenue",
     "alt_site_plan": ("Site plan showing 48 numbered plots, the internal "
                       "roads, the common plot and the entry gate"),
+    "front_view_subtitle": "The homes from the street",
+    "front_view_caption": ("Exposed brick, a balcony over the door, "
+                           "your own terrace above it."),
+    "alt_front_view": ("Front elevation of four Lake Tree Avenue townhouses "
+                       "at dusk: exposed brick and grey facades, a balcony "
+                       "over each timber front door, lit windows, terrace "
+                       "railings above, and lamp posts, young trees and "
+                       "on-plot parking along the paved street."),
     "key_plan_subtitle": "What stands either side of the gate",
     "alt_key_plan": ("Key plan: Lake Tree Avenue on Waghodia Main Road, between "
                      "Parul University and Sumandeep Vidyapeeth, with landmarks "
