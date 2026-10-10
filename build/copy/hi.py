@@ -45,7 +45,7 @@ ROOM_LABELS = {
 
 ROOM_VALUE_WORDS = {
     "standing_balcony": "2'-0\" चौड़ी, दो",
-    "ots": "ऊपर से खुला शाफ्ट",
+    "ots": "ऊपर से खुला शाफ़्ट",
     "also": "स्टोर, वॉश एरिया, ओटा",
 }
 
