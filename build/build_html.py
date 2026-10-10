@@ -205,6 +205,48 @@ section { padding: 84px 0; }
   margin-top: 14px; display: flex; gap: 22px; flex-wrap: wrap;
 }
 
+/* ---------- the plot schedule ----------
+   Forty-eight plots, as the developer's own sheet lists them: sixteen
+   rows to a column, three columns across. The columns are three separate
+   tables rather than one six-column table, because one table that wide
+   either scrolls sideways on a phone or sets "709 sq ft" in four
+   characters a line. Three tables stack instead, each keeping its own
+   pair of column heads where the eye needs them.
+
+   Figures are tabular-numbered and right-aligned: a column of areas is
+   read by comparing it down its own digits, and proportional numerals
+   put the hundreds under the thousands. */
+/* Held to the drawing's own width and centred under it, so the schedule
+   reads as the sheet's second page rather than as a wider thing the page
+   happened to put there. */
+.plot-areas { margin: 26px auto 0; max-width: 820px; display: grid;
+  grid-template-columns: 1fr; gap: 26px; }
+.plot-table { width: 100%; border-collapse: collapse; background: #ffffff;
+  font-variant-numeric: tabular-nums; }
+.plot-table caption { position: absolute; width: 1px; height: 1px;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.plot-table th, .plot-table td { padding: 9px 12px; text-align: left;
+  border-bottom: 1px solid var(--rule); }
+.plot-table thead th {
+  font-family: var(--sans); font-weight: 600; font-size: 0.74rem;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft);
+  border-bottom: 1px solid var(--ink); white-space: nowrap;
+}
+.plot-table tbody th {
+  font-family: var(--sans); font-weight: 600; font-size: 0.95rem;
+  color: var(--ink); width: 38%;
+}
+.plot-table td { text-align: right; color: var(--ink-soft);
+  font-size: 0.95rem; }
+/* The entrance row is the one part of the schedule a reader can place on
+   the drawing at a glance, so its six plots are tinted rather than
+   labelled -- a type column repeated forty-eight times would say "B"
+   forty-two times. */
+.plot-table .plot-a th, .plot-table .plot-a td { background: #faf2e6; }
+.plot-table .plot-a th { color: var(--terra-deep); }
+.plot-note { font-family: var(--sans); font-size: 0.84rem;
+  color: var(--ink-soft); margin: 14px auto 0; max-width: 820px; }
+
 /* The key plan, edge to edge. It sits between two .wrap columns inside
    a banded section, so it needs no negative margins -- it is simply not
    wrapped. The vertical rules separate it from the prose either side. */
@@ -278,6 +320,8 @@ footer img { width: 128px; margin-bottom: 18px; }
      sheets are portrait, so the two floors share that measure. */
   .plan-grid-stacked { grid-template-columns: 1fr; gap: 34px; }
   .plan-grid-stacked .plan-sheets { grid-template-columns: 1fr 1fr; gap: 26px; }
+  /* Sixteen rows a column, the way the schedule was issued. */
+  .plot-areas { grid-template-columns: repeat(3, 1fr); gap: 34px; }
   .spec-list div { grid-template-columns: 210px 1fr; gap: 26px; }
   .amenities { columns: 2; }
   .contact-grid { grid-template-columns: repeat(3, 1fr); gap: 44px; }
@@ -576,6 +620,39 @@ def _schedule_rows(words) -> str:
     )
 
 
+PLOT_COLUMN = 16
+
+
+def _plot_schedule(words) -> str:
+    """The whole plot schedule: every plot, its area, in three columns.
+
+    Every plot is listed. The plan pages give a type's plot area as a
+    range because a range is what a drawing of two hundred identical
+    rooms can honestly print; this is the sheet behind that range, and a
+    buyer asking about plot 35 is asking about one number.
+    """
+    ui = words.UI
+    cells = content.plot_area_cells()
+    columns = [cells[i:i + PLOT_COLUMN]
+               for i in range(0, len(cells), PLOT_COLUMN)]
+    out = ['<div class="plot-areas">']
+    for column in columns:
+        first, last = column[0][0], column[-1][0]
+        out.append('<table class="plot-table">')
+        out.append(f'<caption>{_esc(ui["plot_areas"])} '
+                   f"{_esc(first)}\u2013{_esc(last)}</caption>")
+        out.append(f'<thead><tr><th scope="col">{_esc(ui["plot_no_col"])}'
+                   f'</th><th scope="col">{_esc(ui["plot_area_col"])}'
+                   "</th></tr></thead><tbody>")
+        for number, area, unit_key in column:
+            cls = ' class="plot-a"' if unit_key == "A" else ""
+            out.append(f"<tr{cls}><th scope=\"row\">{_esc(number)}</th>"
+                       f"<td>{_esc(area)}</td></tr>")
+        out.append("</tbody></table>")
+    out.append("</div>")
+    return "".join(out)
+
+
 def _plan_pane(locale: str, key: str, words) -> str:
     """One tab's drawings and its schedule.
 
@@ -713,6 +790,14 @@ def _document(locale: str, words) -> str:
     out.append(f'<p class="legend"><span>{_esc(s["layout"]["body"][0])}</span>'
                f'<span>{_esc(ui["ask_which_plots"])}</span></p>')
     out.append("</div></div>")
+
+    # The schedule under the drawing, not beside it: the drawing is read
+    # for where a plot sits and the schedule for how big it is, and a
+    # reader doing the second thing is holding a number, not a map.
+    out.append(f'<div class="dim"><span>{_esc(ui["plot_areas"])}</span></div>')
+    out.append(f'<p class="plot-note">{_esc(ui["plot_areas_lead"])} '
+               f'{_esc(ui["plot_areas_note"])}</p>')
+    out.append(_plot_schedule(words))
     out.append("</div></section>")
 
     # specifications

@@ -109,6 +109,33 @@ def wa_link(message: str) -> str:
     return f"https://wa.me/{digits}?text=" + quote(message, safe="")
 
 
+# Every plot on the site plan, and the area of the land under that home,
+# as the developer issued them on one sheet. Site-plan order, so a reader
+# with the drawing in front of them reads down the same numbers.
+#
+# The sheet also carried a price per plot and a payment schedule. Neither
+# is here: the brochure quotes price on call, and a figure committed to a
+# published file is a figure that outlives the week it was true.
+#
+# Two-digit numbers come from the renderers, not from this tuple -- these
+# are the plot's number, and 7 is 7.
+PLOT_AREAS = (
+    (1, 1041), (2, 703), (3, 703), (4, 703), (5, 713), (6, 937),
+    (7, 707), (8, 707), (9, 707), (10, 707), (11, 822), (12, 1007),
+    (13, 1050), (14, 920), (15, 709), (16, 709), (17, 709), (18, 901),
+    (19, 901), (20, 709), (21, 709), (22, 709), (23, 709), (24, 845),
+    (25, 845), (26, 709), (27, 709), (28, 709), (29, 709), (30, 901),
+    (31, 901), (32, 709), (33, 709), (34, 709), (35, 1013), (36, 898),
+    (37, 714), (38, 713), (39, 713), (40, 712), (41, 873), (42, 872),
+    (43, 710), (44, 709), (45, 709), (46, 709), (47, 709), (48, 863),
+)
+
+# The unit every measured area is given in. Latin in all three documents,
+# the same as the dimensions inside the drawings: a buyer compares "709
+# sq ft" against every other brochure they are holding.
+AREA_UNIT = "sq ft"
+
+
 UNIT_TYPES = {
     # Both types are read off their own pair of issued sheets, one per
     # floor, which supersede the strip of small plans on the layout page.
@@ -226,3 +253,28 @@ def sheet_rows(unit: dict, sheet: dict, words) -> tuple[tuple[str, str], ...]:
         raise KeyError(f"{sheet['key']} sheet lists unknown rows: {missing}")
     return tuple((words.ROOM_LABELS[key], room_value(unit, key, words))
                  for key in sheet["rows"])
+
+
+def plot_unit_key(number: int) -> str:
+    """Which plan type the home on plot `number` is built to.
+
+    Read off the type's own plot run rather than hard-coded, so the two
+    cannot drift: the runs are what the drawings are titled with.
+    """
+    for key, unit in UNIT_TYPES.items():
+        first, last = (int(part) for part in unit["plot_range"].split("\u2013"))
+        if first <= number <= last:
+            return key
+    raise KeyError(f"plot {number} belongs to no plan type")
+
+
+def plot_area_cells() -> tuple[tuple[str, str, str], ...]:
+    """The plot schedule, ready to set: number, area, plan type.
+
+    Nothing here is translated. A plot number is a plot number, the area
+    is Latin numerals and `AREA_UNIT`, and the type key is structure --
+    the renderers label it from the reader's own UNIT_LABELS.
+    """
+    return tuple((f"{number:02d}", f"{area} {AREA_UNIT}",
+                  plot_unit_key(number))
+                 for number, area in PLOT_AREAS)

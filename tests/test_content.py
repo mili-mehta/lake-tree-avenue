@@ -305,5 +305,50 @@ class TestForbiddenGuard(unittest.TestCase):
         self.assertEqual(content.forbidden_hits("48 townhouses in Vadodara"), [])
 
 
+class TestPlotSchedule(unittest.TestCase):
+    """The per-plot areas, against the plan types they have to agree with."""
+
+    def test_all_forty_eight_plots_once_each_in_site_plan_order(self):
+        numbers = [n for n, _ in content.PLOT_AREAS]
+        self.assertEqual(numbers, list(range(1, 49)))
+
+    def test_every_plot_belongs_to_a_plan_type(self):
+        types = [content.plot_unit_key(n) for n, _ in content.PLOT_AREAS]
+        self.assertEqual(types.count("A"), 6)
+        self.assertEqual(types.count("B"), 42)
+
+    def test_a_plot_outside_the_scheme_is_refused(self):
+        with self.assertRaises(KeyError):
+            content.plot_unit_key(49)
+
+    def test_each_type_plot_area_range_is_what_its_own_plots_measure(self):
+        # The plan pages quote a range because one drawing serves many
+        # homes. If a plot's area changes and the range does not, the two
+        # pages contradict each other -- which is the kind of error a
+        # buyer finds and the brochure never does.
+        for key, unit in content.UNIT_TYPES.items():
+            areas = [a for n, a in content.PLOT_AREAS
+                     if content.plot_unit_key(n) == key]
+            quoted = [int(x) for x in
+                      re.findall(r"\d+", dict(unit["rooms"])["plot_area"])]
+            self.assertEqual(quoted, [min(areas), max(areas)], key)
+
+    def test_the_cells_are_two_digit_numbers_and_latin_areas(self):
+        cells = content.plot_area_cells()
+        self.assertEqual(len(cells), 48)
+        self.assertEqual(cells[0], ("01", "1041 sq ft", "A"))
+        self.assertEqual(cells[-1], ("48", "863 sq ft", "B"))
+        for number, area, _ in cells:
+            self.assertRegex(number, r"^\d\d$")
+            self.assertRegex(area, r"^\d{3,4} sq ft$")
+
+    def test_no_price_or_payment_term_travels_with_the_areas(self):
+        # The schedule was issued as a price list. What is carried here is
+        # the plot number and the land under it, and nothing else on that
+        # sheet.
+        blob = " ".join(f"{n} {a}" for n, a in content.PLOT_AREAS)
+        self.assertIsNone(re.search(r"(\u20b9|%|\d{6,})", blob))
+
+
 if __name__ == "__main__":
     unittest.main()

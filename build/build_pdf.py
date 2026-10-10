@@ -541,6 +541,77 @@ def _layout(doc, art):
     return page
 
 
+# Sixteen plots to a column, three columns across: the schedule as the
+# developer issued it, which is also the only arrangement that fits all
+# forty-eight rows on one landscape page at a size a buyer can read.
+PLOT_COLUMN = 16
+PLOT_PITCH = 22.0
+
+
+def _plot_areas(doc, art):
+    """Every plot and the area of the land under it, on one page.
+
+    Facing the site plan, because the two are read together: the drawing
+    answers where plot 35 is and this answers how much ground it stands
+    on. The plan pages quote a type's plot area as a range -- one drawing
+    serves forty-two homes -- and this is the sheet behind that range.
+
+    The six entrance-row plots are banded rather than labelled: a type
+    column would print the same letter forty-two times to tell the reader
+    something the tint tells them at a glance.
+
+    Every row is measured and the build fails if the schedule outgrows
+    the page. A plot that silently dropped off the bottom is a plot a
+    buyer would be told does not exist.
+    """
+    page = _page(doc)
+    words = art["words"]
+    ui = words.UI
+    y = _heading(page, ui["plot_areas"], ui["plot_areas_lead"], width=520.0)
+    note = _text(page, fitz.Rect(MARGIN, y, MARGIN + 520, y + 30),
+                 ui["plot_areas_note"], font=SANS, size=8.5,
+                 color=INK_SOFT)
+    if note < 0:
+        raise LayoutOverflow("the plot schedule note does not fit its line")
+    y += 30 - note + 12
+
+    cells = content.plot_area_cells()
+    gap = 42.0
+    col_w = (PAGE_SIZE[0] - 2 * MARGIN - 2 * gap) / 3.0
+    split = col_w * 0.46  # where the number column ends and the area begins
+    for i in range(0, len(cells), PLOT_COLUMN):
+        column = cells[i:i + PLOT_COLUMN]
+        x = MARGIN + (i // PLOT_COLUMN) * (col_w + gap)
+        cy = y
+        _text(page, fitz.Rect(x, cy, x + split, cy + 14), ui["plot_no_col"],
+              font=SANS_BOLD, size=7.6, color=INK_SOFT)
+        _text(page, fitz.Rect(x + split, cy, x + col_w, cy + 14),
+              ui["plot_area_col"], font=SANS_BOLD, size=7.6, color=INK_SOFT,
+              align=2)
+        cy += 16
+        _line(page, x, cy, x + col_w, color=INK, width=0.9)
+        for number, area, unit_key in column:
+            if unit_key == "A":
+                _fill(page, fitz.Rect(x, cy, x + col_w, cy + PLOT_PITCH), SAND)
+            _text(page, fitz.Rect(x + 2, cy + 3, x + split, cy + PLOT_PITCH + 3),
+                  number, font=SANS_BOLD, size=9,
+                  color=TERRA_DEEP if unit_key == "A" else INK)
+            if _text(page, fitz.Rect(x + split, cy + 3, x + col_w - 2,
+                                     cy + PLOT_PITCH + 3),
+                     area, font=SERIF, size=9.5, color=INK, align=2) < 0:
+                raise LayoutOverflow(
+                    f"plot {number} area {area!r} does not fit a "
+                    f"{col_w - split:.0f} pt column")
+            cy += PLOT_PITCH
+            _line(page, x, cy, x + col_w)
+            if cy > FOOTER_TOP - 6:
+                raise LayoutOverflow(
+                    f"plot {number} ends at {cy:.0f} pt, past the footer "
+                    f"at {FOOTER_TOP:.0f} pt")
+    _footer(page, words)
+    return page
+
+
 def _specs(doc, art):
     page = _page(doc)
     s = art["sections"]["specs"]
@@ -767,7 +838,7 @@ def build_doc(locale: str = copy.DEFAULT) -> fitz.Document:
     doc = fitz.open()
     with _using(locale):
         for builder in (_cover, _project, _elevation, _plans,
-                        _layout, _specs, _location, _contact,
+                        _layout, _plot_areas, _specs, _location, _contact,
                         _disclaimers):
             builder(doc, art)
     doc.set_metadata({

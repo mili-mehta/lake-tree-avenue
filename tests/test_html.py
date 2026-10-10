@@ -1,3 +1,4 @@
+import html
 import re
 import unittest
 from build import build_html, content, copy, fonts
@@ -526,6 +527,70 @@ class TestLanguageToggle(unittest.TestCase):
 
     def test_under_size_budget(self):
         self.assertLess(len(self.html.encode("utf-8")), 6 * 1024 * 1024)
+
+
+class TestPlotSchedule(unittest.TestCase):
+    """Forty-eight plots and their areas, under the drawing that numbers them."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.html = build_html.render_html()
+        cls.markup = re.sub(r"data:[a-z0-9/+.-]+;base64,[A-Za-z0-9+/=]+",
+                            "DATA", cls.html)
+
+    def _section(self, locale):
+        doc = build_html.doc(self.markup, locale)
+        return doc.split(f'id="{locale}-layout"')[1].split("</section>")[0]
+
+    def _schedule(self, locale):
+        return self._section(locale).split('<div class="plot-areas">')[1]
+
+    def test_the_schedule_sits_in_the_site_plan_section(self):
+        # Not a section of its own: the drawing says where a plot is and
+        # the schedule says how big it is, and a reader holding one wants
+        # the other on the same screen.
+        for locale in copy.LOCALES:
+            section = self._section(locale)
+            self.assertIn('<div class="plot-areas">', section)
+            self.assertLess(section.index('class="map"'),
+                            section.index('class="plot-areas"'), locale)
+
+    def test_every_plot_is_listed_with_its_area(self):
+        for locale in copy.LOCALES:
+            schedule = self._schedule(locale)
+            for number, area, _ in content.plot_area_cells():
+                self.assertIn(f'<th scope="row">{number}</th>'
+                              f"<td>{area}</td>", schedule,
+                              f"{locale} is missing plot {number}")
+
+    def test_the_forty_eight_run_in_three_columns_of_sixteen(self):
+        for locale in copy.LOCALES:
+            schedule = self._schedule(locale)
+            self.assertEqual(schedule.count("<tbody>"), 3, locale)
+            rows = re.findall(r'<th scope="row">\d\d</th>', schedule)
+            self.assertEqual(len(rows), 48, locale)
+
+    def test_each_column_carries_its_own_pair_of_heads(self):
+        for locale in copy.LOCALES:
+            ui = copy.for_locale(locale).UI
+            schedule = self._schedule(locale)
+            for head in (ui["plot_no_col"], ui["plot_area_col"]):
+                self.assertEqual(
+                    schedule.count(f'<th scope="col">{html.escape(head)}'
+                                   "</th>"), 3, f"{locale} {head}")
+
+    def test_the_entrance_row_is_marked_without_a_column_of_its_own(self):
+        # Six tinted rows, not forty-eight repetitions of a type letter.
+        for locale in copy.LOCALES:
+            self.assertEqual(self._schedule(locale).count('class="plot-a"'),
+                             6, locale)
+
+    def test_no_price_or_payment_term_is_published_with_the_areas(self):
+        for locale in copy.LOCALES:
+            schedule = self._schedule(locale)
+            self.assertIsNone(
+                re.search(r"(\u20b9|Rs\.?\s*\d|\d+\s*%|\d{6,})", schedule),
+                locale)
 
 
 if __name__ == "__main__":

@@ -24,18 +24,20 @@ def _unligate(text: str) -> str:
     return text
 
 # cover, project, the front elevation, then a page per floor per type,
-# then layout, specs, location (prose and the key plan together), contact
+# then layout, the plot schedule facing it, specs, location (prose and the
+# key plan together), contact
 ELEVATION_PAGE = 2
 PLAN_PAGES = {"A": (3, 4), "B": (5, 6)}
 GROUND_PAGE = {key: pages[0] for key, pages in PLAN_PAGES.items()}
 FIRST_PAGE = {key: pages[1] for key, pages in PLAN_PAGES.items()}
 ALL_PLAN_PAGES = [i for pages in PLAN_PAGES.values() for i in pages]
 LAYOUT_PAGE = 7
-SPECS_PAGE = 8
-LOCATION_PAGE = 9
-CONTACT_PAGE = 10
+PLOT_AREAS_PAGE = 8
+SPECS_PAGE = 9
+LOCATION_PAGE = 10
+CONTACT_PAGE = 11
 # The disclaimers close the brochure: they qualify every page before them.
-DISCLAIMERS_PAGE = 11
+DISCLAIMERS_PAGE = 12
 
 
 class TestPdf(unittest.TestCase):
@@ -50,11 +52,11 @@ class TestPdf(unittest.TestCase):
     def tearDownClass(cls):
         os.unlink(cls.path)
 
-    def test_twelve_pages_a4_landscape(self):
+    def test_thirteen_pages_a4_landscape(self):
         # Both types take a page per floor. Two sheets sharing one page
         # shrink to roughly half the width, and at that size the room
         # dimensions printed inside them stop being readable.
-        self.assertEqual(self.doc.page_count, 12)
+        self.assertEqual(self.doc.page_count, 13)
         for page in self.doc:
             self.assertAlmostEqual(page.rect.width, 842.0, places=0)
             self.assertAlmostEqual(page.rect.height, 595.0, places=0)
@@ -380,12 +382,12 @@ class TestEveryLanguage(unittest.TestCase):
             doc.close()
             os.unlink(cls.paths[locale])
 
-    def test_every_language_builds_the_same_twelve_pages(self):
+    def test_every_language_builds_the_same_thirteen_pages(self):
         # A LayoutOverflow during the build is the real assertion here:
         # Devanagari runs longer than English, and a box tuned for the
         # English would drop the tail of a sentence.
         for locale, doc in self.docs.items():
-            self.assertEqual(doc.page_count, 12, locale)
+            self.assertEqual(doc.page_count, 13, locale)
 
     def test_every_indic_character_has_a_glyph(self):
         # A font missing one conjunct still renders the line, with a hole
@@ -498,6 +500,45 @@ class TestEveryLanguage(unittest.TestCase):
     def test_each_language_stays_under_the_size_budget(self):
         for locale, path in self.paths.items():
             self.assertLess(os.path.getsize(path), 4 * 1024 * 1024, locale)
+
+
+class TestPlotSchedule(unittest.TestCase):
+    """Every plot, on the page facing the drawing that numbers them."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.doc = build_pdf.build_doc()
+        cls.text = " ".join(
+            cls.doc[PLOT_AREAS_PAGE].get_text().split())
+
+    def test_every_one_of_the_forty_eight_plots_is_listed(self):
+        # A schedule that quietly dropped a row would tell a buyer the
+        # plot they are standing on does not exist.
+        for number, area, _ in content.plot_area_cells():
+            self.assertIn(f"{number} {area}", self.text, number)
+
+    def test_the_areas_are_the_ones_the_developer_issued(self):
+        pairs = re.findall(r"\b(\d\d) (\d{3,4}) sq ft\b", self.text)
+        self.assertEqual([(int(n), int(a)) for n, a in pairs],
+                         [(n, a) for n, a in content.PLOT_AREAS])
+
+    def test_both_column_heads_repeat_over_all_three_columns(self):
+        for head in (EN.UI["plot_no_col"], EN.UI["plot_area_col"]):
+            self.assertEqual(self.text.count(head), 3, head)
+
+    def test_no_price_reaches_the_schedule(self):
+        # The sheet this came from carried a price and a payment
+        # schedule beside every area. Neither is published.
+        self.assertIsNone(
+            re.search(r"(\u20b9|Rs\.?\s*\d|\d{6,}|\d+\s*%)", self.text))
+
+    def test_every_language_prints_the_whole_schedule(self):
+        for locale in copy.LOCALES:
+            doc = build_pdf.build_doc(locale)
+            text = " ".join(doc[PLOT_AREAS_PAGE].get_text().split())
+            for number, area, _ in content.plot_area_cells():
+                self.assertIn(f"{number} {area}", text, f"{locale} {number}")
+            doc.close()
 
 
 if __name__ == "__main__":

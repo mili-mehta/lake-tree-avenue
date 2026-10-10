@@ -215,6 +215,18 @@ UI = {
     "layout_plan": "LAYOUT PLAN",
     "sheet_subtitle": "Lake Tree Avenue, Waghodia Main Road, Vadodara",
     "ask_which_plots": "Ask us which plots are still open",
+    # The plot schedule: the divider over it on the page, the title of
+    # its own page in the PDF, and the one line that says why 48 areas
+    # are worth reading when the homes above them are the same.
+    "plot_areas": "Plot areas",
+    "plot_areas_lead": ("The land under each home, plot by plot, numbered "
+                        "as on the site plan."),
+    "plot_areas_note": ("The homes are identical inside; only the land "
+                        "under them varies."),
+    # The two column heads the schedule repeats across the table, worded
+    # as the issued sheet words them.
+    "plot_no_col": "Unit No.",
+    "plot_area_col": "Plot Area",
     "follow_line": "{handle} on Instagram and Facebook",
 
     # the sticky bar
