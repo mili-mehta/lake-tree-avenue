@@ -79,8 +79,6 @@ class TestCopyParity(unittest.TestCase):
                              len(copy.for_locale("en").PROJECT_SCHEDULE), code)
             self.assertEqual(len(words.SPEC_GROUPS), 9, code)
             self.assertEqual(len(words.AMENITIES), 6, code)
-            self.assertEqual(len(words.LOCATION_ROWS), 5, code)
-            self.assertEqual(len(words.KEY_PLAN_ROWS), 9, code)
 
 
 class TestCopyIsActuallyTranslated(unittest.TestCase):

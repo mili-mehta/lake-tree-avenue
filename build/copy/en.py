@@ -87,35 +87,6 @@ AMENITIES = (
     "Rain water harvesting system",
 )
 
-LOCATION_ROWS = (
-    ("Road", "Waghodia Main Road frontage"),
-    ("Between", "Parul University and Sumandeep College"),
-    ("Next to", "Spunpipe & Construction Co."),
-    ("Area", "Kamlapura, Vadodara"),
-    ("Corridor", "Vadodara east, toward Halol"),
-)
-
-# The landmarks the key plan pins, and how far each one is by road.
-#
-# These figures exist nowhere else: the key plan carries them as artwork,
-# and a picture of a number is invisible to a screen reader, to a search
-# engine and to anyone who copies a line to send on. So they are set as
-# text beside the drawing rather than left in its pixels.
-#
-# The Hindi and Gujarati sheets carry these names in their own script, so
-# a reader of those pages never meets half a line of Latin.
-KEY_PLAN_ROWS = (
-    ("Parul University", "2.3 km"),
-    ("Sumandeep Vidyapeeth", "2.3 km"),
-    ("Dhiraj Hospital", "2.3 km"),
-    ("Avalon World School", "2.5 km"),
-    ("Waghodia GIDC", "4.2 km"),
-    ("L&T Knowledge City", "8.8 km"),
-    ("Nimeta Garden", "9.7 km"),
-    ("AATAPI Wonderland", "10.1 km"),
-    ("Vadodara Airport", "13.8 km"),
-)
-
 SECTIONS = (
     {
         "id": "cover",
@@ -219,12 +190,14 @@ UI = {
     "alt_site_plan": ("Site plan showing 48 numbered plots, the internal "
                       "roads, the common plot and the entry gate"),
     "key_plan_subtitle": "What stands either side of the gate",
-    "nearby": "By road from the gate",
-    "key_plan_note": "Distances are approximate, measured by road.",
-    "alt_key_plan": ("Key plan: Lake Tree Avenue on Waghodia Main Road, with the "
-                     "schools, hospitals, universities and landmarks either "
-                     "side of it pinned along the road. Not to scale; the "
-                     "distances are listed beside it."),
+    "alt_key_plan": ("Key plan: Lake Tree Avenue on Waghodia Main Road, between "
+                     "Parul University and Sumandeep Vidyapeeth, with landmarks "
+                     "either side pinned along the road. Not to scale. "
+                     "Approximate distances by road: Parul University, "
+                     "Sumandeep Vidyapeeth and Dhiraj Hospital 2.3 km; Avalon "
+                     "World School 2.5 km; Waghodia GIDC 4.2 km; L&T Knowledge "
+                     "City 8.8 km; Nimeta Garden 9.7 km; AATAPI Wonderland "
+                     "10.1 km; Vadodara Airport 13.8 km."),
     "alt_plan_sheet": "{caption} plan for plots {range}, with room dimensions",
 }
 

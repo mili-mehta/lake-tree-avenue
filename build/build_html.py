@@ -198,20 +198,6 @@ section { padding: 84px 0; }
    wrapped. The vertical rules separate it from the prose either side. */
 .key-plan-figure { margin: 26px 0 0; }
 
-/* The key plan's distances, set as text under the drawing. The drawing
-   carries them too, as artwork; these are the copy a screen reader
-   reaches, a search engine indexes and a reader can select and send on. */
-.distances { list-style: none; margin: 18px 0 0; padding: 0;
-  display: grid; grid-template-columns: 1fr; }
-.distances li {
-  display: flex; justify-content: space-between; align-items: baseline;
-  gap: 16px; padding: 9px 0; border-top: 1px solid var(--rule);
-  font-family: var(--sans); font-size: 0.86rem;
-}
-.distances b { font-weight: 600; }
-.distances span { color: var(--ink-soft); font-variant-numeric: tabular-nums;
-  white-space: nowrap; }
-
 /* ---------- specifications ---------- */
 .spec-list { margin: 0; }
 .spec-list div {
@@ -269,7 +255,6 @@ footer img { width: 128px; margin-bottom: 18px; }
   .plan-grid-stacked .plan-sheets { grid-template-columns: 1fr 1fr; gap: 26px; }
   .spec-list div { grid-template-columns: 210px 1fr; gap: 26px; }
   .amenities { columns: 2; }
-  .distances { grid-template-columns: 1fr 1fr; column-gap: 44px; }
   .contact-grid { grid-template-columns: repeat(3, 1fr); gap: 44px; }
   .bar { display: none; }
   footer { padding-bottom: 60px; }
@@ -724,21 +709,12 @@ def _document(locale: str, words) -> str:
                + _shot("key-plan", ui["alt_key_plan"]) + "</div>")
     out.append('<div class="wrap">')
 
-    # The distances, repeated as text. The artwork's own labels are
-    # English in every language -- it is a raster, not copy -- so this
-    # list is what actually translates, and what a screen reader reads.
-    out.append(f'<div class="dim"><span>{_esc(ui["nearby"])}</span></div>')
-    out.append('<ul class="distances">')
-    out.extend(f"<li><b>{_esc(place)}</b><span>{_esc(away)}</span></li>"
-               for place, away in words.KEY_PLAN_ROWS)
-    out.append("</ul>")
-    out.append(f'<p class="legend"><span>{_esc(ui["key_plan_note"])}</span>'
-               f'</p>')
-
-    rows = "".join(
-        f'<tr><th scope="row">{_esc(k)}</th><td>{_esc(v)}</td></tr>'
-        for k, v in words.LOCATION_ROWS)
-    out.append(f'<table class="schedule">{rows}</table>')
+    # Nothing is set under the drawing. The distances and the landmarks
+    # either side of the gate are in the artwork, and repeating them as a
+    # list and a table only said the same thing three times. What a
+    # screen reader and a search engine need is in the image's own
+    # accessible name, which is where it now lives in all three
+    # languages.
     out.append('<div class="actions" style="margin-top:30px">')
     out.append(f'<a class="btn btn-quiet" href="{p["maps_url"]}" '
                f'target="_blank" rel="noopener">{_icon("pin")}'

@@ -16,7 +16,7 @@ RENDER_SRC = os.path.join(ROOT, "images", "lake-tree-avenue.PNG")
 LAYOUT_SRC = os.path.join(ROOT, "REV.LAYOUT - 07-10-2026.pdf")
 SITE_PLAN_SRC = os.path.join(ROOT, "images", "site-plan.png")
 KEY_PLAN_SRC = os.path.join(ROOT, "images",
-                            "Lake Tree Avenue Key Plan-landscape.png")
+                            "Lake Tree Avenue Key Plan.png")
 
 # The floor plans as issued: one portrait sheet per floor per unit type,
 # each showing a single townhouse. Ground floor first, the order a visitor

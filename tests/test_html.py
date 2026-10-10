@@ -304,11 +304,12 @@ class TestHtml(unittest.TestCase):
 
 
 class TestKeyPlan(unittest.TestCase):
-    """The landmark drawing and the distances it pins.
+    """The landmark drawing, which now stands on its own.
 
-    The drawing is a raster with English labels burnt into it, so the list
-    beside it is the only form of those figures that translates, that a
-    screen reader reaches and that a reader can select and send on.
+    The drawing pins the landmarks and prints the distances itself, so
+    nothing repeats them under it. What a raster cannot give a screen
+    reader or a search engine is in its accessible name instead, which is
+    the one place those figures still have to be text.
     """
 
     @classmethod
@@ -325,23 +326,35 @@ class TestKeyPlan(unittest.TestCase):
         self.assertEqual(len(labels), 3, labels)
         self.assertEqual(len(set(labels)), 3, "a language reuses another's alt")
 
-    def test_every_distance_is_set_as_text_in_every_language(self):
-        for code in copy.LOCALES:
-            words = copy.for_locale(code)
-            for place, away in words.KEY_PLAN_ROWS:
-                self.assertIn(f"<li><b>{place.replace('&', '&amp;')}</b>"
-                              f"<span>{away}</span></li>", self.html,
-                              f"{code}: {place} is missing its distance")
+    def test_every_distance_is_carried_by_the_accessible_name(self):
+        # The figures are Latin digits in all three documents, so each
+        # one has to appear in each language's alt text: that name is the
+        # only form of them a screen reader or a crawler ever meets.
+        labels = re.findall(r'class="shot shot-key-plan" role="img" '
+                            r'aria-label="([^"]+)"', self.html)
+        self.assertEqual(len(labels), 3, labels)
+        for label in labels:
+            for figure in ("2.3", "2.5", "4.2", "8.8", "9.7", "10.1", "13.8"):
+                self.assertIn(figure, label, f"{figure} is missing: {label}")
 
-    def test_the_distances_sit_inside_the_location_section(self):
+    def test_the_drawing_sits_inside_the_location_section(self):
         # Beside the prose about the road, not stranded in another band.
         section = self.html.split('id="en-location"')[1].split("</section>")[0]
         self.assertIn("shot-key-plan", section)
-        self.assertIn('class="distances"', section)
+
+    def test_nothing_repeats_the_drawing_under_it(self):
+        # The distance list and the location schedule both said what the
+        # artwork draws. Neither comes back.
+        section = self.html.split('id="en-location"')[1].split("</section>")[0]
+        self.assertNotIn('class="distances"', section)
+        self.assertNotIn('class="schedule"', section)
 
     def test_the_drawing_is_called_not_to_scale(self):
-        for code in copy.LOCALES:
-            self.assertIn(copy.for_locale(code).UI["key_plan_note"], self.html)
+        # The artwork prints "NOT TO SCALE" itself; the alt text says so
+        # for a reader who only ever gets the alt text.
+        for label in re.findall(r'class="shot shot-key-plan" role="img" '
+                                r'aria-label="([^"]+)"', self.html):
+            self.assertRegex(label, "(?i)not to scale|પ્રમાણસર નથી|पैमाने पर नहीं")
 
 
 class TestLanguageToggle(unittest.TestCase):

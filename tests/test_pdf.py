@@ -488,47 +488,26 @@ class TestKeyPlan(unittest.TestCase):
         page = self.doc[KEY_PLAN_PAGE]
         rect = page.get_image_rects(page.get_images()[0][0])[0]
         self.assertLess(rect.y1, build_pdf.FOOTER_TOP - 40,
-                        "the drawing runs into its own caption")
+                        "the drawing runs into the footer")
 
-    def test_the_drawing_page_carries_nothing_but_its_caption(self):
-        # The distances belong on the location page, at a reading size.
+    def test_the_drawing_page_carries_nothing_but_the_footer(self):
+        # The artwork pins the landmarks and prints the distances itself.
+        # A caption under it and a list facing it only said it again.
         text = _unligate(" ".join(self.doc[KEY_PLAN_PAGE].get_text().split()))
-        self.assertIn(EN.UI["key_plan_note"], text)
-        for place, _ in EN.KEY_PLAN_ROWS:
-            self.assertNotIn(place, text, f"{place} repeats on the drawing page")
+        for figure in ("2.3", "2.5", "4.2", "8.8", "9.7", "10.1", "13.8"):
+            self.assertNotIn(f"{figure} km", text,
+                             f"{figure} km is set as text over the drawing")
 
-    def test_every_distance_is_set_as_text_on_the_location_page(self):
+    def test_the_location_page_no_longer_repeats_the_drawing(self):
+        # Neither the distance columns nor the road/between/next-to
+        # schedule: both were the key plan in another typeface.
         text = _unligate(" ".join(self.doc[LOCATION_PAGE].get_text().split()))
-        self.assertIn(EN.UI["nearby"], text)
-        for place, away in EN.KEY_PLAN_ROWS:
-            self.assertIn(place, text, f"{place} is missing")
-            self.assertIn(away, text, f"{place} has no distance")
-
-    def test_every_language_sets_every_distance(self):
-        # Asserted on the figures, which are Latin digits in all three
-        # documents, and on their order, which is the order of the rows.
-        # The place names are now Hindi and Gujarati, and MuPDF's extractor
-        # hands a shaped Indic cluster back as whatever codepoints its
-        # glyphs were mapped from, so the extracted name is not the source
-        # name and matching on it would test the extractor. That the names
-        # reach the page with glyphs to draw them is
-        # test_every_indic_character_has_a_glyph's job; that each one sits
-        # beside its own figure is checked in English, where extraction is
-        # faithful, by the test above.
-        for locale in copy.LOCALES:
-            words = copy.for_locale(locale)
-            doc = build_pdf.build_doc(locale)
-            text = _unligate(" ".join(doc[LOCATION_PAGE].get_text().split()))
-            figures = [away.split()[0] for _, away in words.KEY_PLAN_ROWS]
-            for figure in figures:
-                self.assertIn(figure, text, f"{locale}: {figure} is missing")
-            found = [m.group() for m in
-                     re.finditer("|".join(re.escape(f) for f in
-                                          sorted(figures, key=len,
-                                                 reverse=True)), text)]
-            self.assertEqual(found, figures,
-                             f"{locale}: the distances are out of order")
-            doc.close()
+        for place in ("Dhiraj Hospital", "Avalon World School",
+                      "Waghodia GIDC", "L&T Knowledge City", "Nimeta Garden",
+                      "AATAPI Wonderland", "Vadodara Airport"):
+            self.assertNotIn(place, text, f"{place} repeats beside the drawing")
+        self.assertIn(EN.UI["get_directions"], text,
+                      "the way there went with it")
 
 
 class TestDeterminism(unittest.TestCase):

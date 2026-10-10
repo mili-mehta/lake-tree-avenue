@@ -250,12 +250,6 @@ class TestLocation(unittest.TestCase):
         self.assertIn("Parul University", blob)
         self.assertIn("Sumandeep", blob)
 
-    def test_landmarks_appear_in_the_location_schedule(self):
-        rows = dict(EN.LOCATION_ROWS)
-        self.assertIn("Between", rows)
-        self.assertIn("Parul University", rows["Between"])
-        self.assertIn("Sumandeep", rows["Between"])
-
     def test_maps_url_carries_the_exact_site_coordinates(self):
         # The pin the owner shared, to the digit. A text search would let
         # Google choose a point on Waghodia Road; this does not.

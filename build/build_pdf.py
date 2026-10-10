@@ -505,31 +505,19 @@ def _location(doc, art):
     s = art["sections"]["location"]
     p = content.PROJECT
     y = _heading(page, s["title"], s["lead"], y=132.0)
-    _text(page, fitz.Rect(MARGIN, y, MARGIN + 340, y + 150),
+    # The prose runs wider than a half page now. The schedule that used to
+    # sit beside it -- road, between, next to, area, corridor -- and the
+    # distance columns under it both said what the key plan on the facing
+    # page already draws, so the page carries the prose, the address and
+    # the way there, and the drawing does the rest.
+    _text(page, fitz.Rect(MARGIN, y, MARGIN + 520, y + 150),
           "\n\n".join(s["body"]) + "\n\n" + art["words"].ADDRESS,
           font=SERIF, size=11, color=INK, leading=1.45)
-    _schedule(page, art["words"].LOCATION_ROWS, 440.0, y,
-              PAGE_SIZE[0] - MARGIN - 440.0, label_w=96.0)
     rect = fitz.Rect(MARGIN, y + 150, MARGIN + 190, y + 178)
     page.draw_rect(rect, color=TERRA, width=1.2)
     _text(page, rect + (12, 8, 0, 0), art["words"].UI["get_directions"], font=SANS_BOLD,
           size=9.5, color=TERRA_DEEP)
     page.insert_link({"kind": fitz.LINK_URI, "from": rect, "uri": p["maps_url"]})
-
-    # The key plan's distances, as text. The drawing itself is on the page
-    # that follows, where its own labels set small; these are the figures a
-    # reader can actually read, and the only form of them that translates.
-    words = art["words"]
-    _fill(page, fitz.Rect(0, 400, PAGE_SIZE[0], FOOTER_TOP - 10), SAND)
-    _text(page, fitz.Rect(MARGIN, 412, MARGIN + 320, 434),
-          words.UI["nearby"], font=SANS_BOLD, size=9, color=INK_SOFT)
-    col_w = (PAGE_SIZE[0] - 2 * MARGIN) / 3
-    rows = words.KEY_PLAN_ROWS
-    third = (len(rows) + 2) // 3
-    for col in range(3):
-        _schedule(page, rows[col * third:(col + 1) * third],
-                  MARGIN + col * col_w, 436.0, col_w - 20,
-                  label_w=col_w - 76, size=8.5, pitch=24.0)
     _footer(page, art["words"])
     return page
 
@@ -540,12 +528,12 @@ def _key_plan(doc, art):
     The artwork is 16:9 and draws to its own edges -- no border, no plate.
     Framing it inside the margins would cost a quarter of its width, and
     its labels are set relative to that width, so width is legibility.
-    So it runs from paper edge to paper edge and the margins apply only to
-    the caption under it.
+    So it runs from paper edge to paper edge.
 
-    Nothing else goes on the page: the distances it pins are set as text
-    on the location page facing it, at a reading size, rather than left to
-    be squinted at inside the artwork.
+    Nothing else goes on the page. The drawing carries its own landmarks,
+    its own distances and its own "NOT TO SCALE" note, so a caption under
+    it and a list facing it only repeated what a reader is already
+    looking at.
     """
     page = _page(doc)
     _fill(page, fitz.Rect(0, 0, PAGE_SIZE[0], PAGE_SIZE[1]), SAND)
@@ -553,9 +541,6 @@ def _key_plan(doc, art):
     height = PAGE_SIZE[0] * img.height / img.width
     page.insert_image(fitz.Rect(0, 0, PAGE_SIZE[0], height),
                       stream=art["key_plan"])
-    _text(page, fitz.Rect(MARGIN, height + 16, PAGE_SIZE[0] - MARGIN,
-                          height + 40), art["words"].UI["key_plan_note"],
-          font=SANS, size=8.5, color=INK_SOFT, align=1)
     _footer(page, art["words"])
     return page
 
