@@ -232,9 +232,9 @@ UI = {
     "alt_site_plan": ("Site plan showing 48 numbered plots, the internal "
                       "roads, the common plot and the entry gate"),
     "front_view_subtitle": "This is what coming home looks like.",
-    "front_view_caption": ("Step out onto your balcony in the morning, and "
-                           "head upstairs to your bedrooms or a private "
-                           "terrace that is completely yours."),
+    "front_view_caption": ("Step out onto your balcony in the morning, or "
+                           "head upstairs to your private terrace that is "
+                           "completely yours."),
     "alt_front_view": ("Front elevation of four Lake Tree Avenue townhouses "
                        "at dusk: exposed brick and grey facades, a balcony "
                        "over each timber front door, lit windows, terrace "
