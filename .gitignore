@@ -4,6 +4,10 @@ node_modules/
 .superpowers/
 __pycache__/
 *.pyc
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
 
 # Private working material - never publish (repo feeds GitHub Pages)
 Lake Tree Avenue Marketing Strategy.md
