@@ -11,7 +11,7 @@ TAGLINE = "New Age Townhouses"
 CREDIT = "A project by TAM Developers"
 ADDRESS = ("Lake Tree Avenue, Waghodia Main Road, "
            "next to Spunpipe & Construction Co., Kamlapura, "
-           "Vadodara 391760")
+           "Dattapura, Vadodara 391760")
 REGD_OFFICE = ("Regd. Office: 1-B Ramkrishna Chambers, BPC Road, "
                "Alkapuri, Vadodara 390007")
 
@@ -55,7 +55,11 @@ PROJECT_SCHEDULE = (
     ("Approach road", "12.00 m town planning road"),
     ("Internal roads", "7.50 m wide roads"),
     ("Levels", "Ground and first floor"),
-    ("Parking", "On plot, plus open-space parking"),
+    ("Bathrooms", "Three: one attached to each bedroom, one on the "
+                  "ground floor"),
+    ("Parking", "In front of every house, plus separate visitor parking"),
+    ("Security", "One gated boundary, 24-hour security, CCTV"),
+    ("Possession", "Proposed for December 2028"),
 )
 
 SPEC_GROUPS = (
@@ -79,13 +83,32 @@ SPEC_GROUPS = (
 )
 
 AMENITIES = (
-    "Entry gate with security cabin",
-    "Large open-space parking",
-    "Underground cabling for a wire-free campus",
+    "Entry gate with a security cabin and 24-hour security",
+    "CCTV at the entry gate and along the avenue",
+    "Private parking in front of every house",
+    "Separate visitor parking in the common area",
+    "Common plot with a landscaped garden",
+    "Underground cabling, no overhead wires",
     "Tremix concrete internal roads with paved sides",
-    "Roadside plantation and street lights",
+    "Trees along the roads and street lights",
     "Rain water harvesting system",
 )
+
+# The places the key plan pins, keyed as content.DISTANCES keys them.
+LANDMARKS = {
+    "parul": "Parul University",
+    "sumandeep": "Sumandeep Vidyapeeth",
+    "dhiraj": "Dhiraj Hospital",
+    "avalon": "Avalon World School",
+    "gidc": "Waghodia GIDC",
+    "waghodia_town": "Waghodia town",
+    "waghodia_chowkdi": "Waghodia Chowkdi",
+    "lnt": "L&T Knowledge City",
+    "nimeta": "Nimeta Garden",
+    "aatapi": "AATAPI Wonderland",
+    "airport": "Vadodara Airport",
+    "railway": "Vadodara Railway Station",
+}
 
 # The disclaimers, as the developer issued them, in the order they were
 # issued. They are the one block of copy in this brochure that is a legal
@@ -138,6 +161,8 @@ SECTIONS = (
             "off from a neighbourhood.",
             "A 12-metre town planning road brings you to the gate. Inside, "
             "7.5-metre internal roads reach every door.",
+            "Every home has three bathrooms: one attached to each bedroom "
+            "upstairs, and one downstairs for guests.",
             "Two plan types: six homes in the entrance row, forty-two along the "
             "avenue.",
         ),
@@ -169,8 +194,8 @@ SECTIONS = (
     {
         "id": "location",
         "title": "Between Parul and Sumandeep",
-        "lead": "On Waghodia Main Road, in the stretch between Parul "
-                "University and Sumandeep College.",
+        "lead": "Parul University about 2.7 km one way, Sumandeep "
+                "Vidyapeeth about 3.9 km the other.",
         "body": ("The gate opens onto the main road, so there is no approach "
                  "lane to negotiate and no last-mile detour.",
                  "Two of Vadodara's largest campuses sit either side of you, "
@@ -187,7 +212,8 @@ SECTIONS = (
     {
         "id": "disclaimers",
         "title": "Disclaimers",
-        "lead": "Please read these before you book.",
+        "lead": "Please read these before you book. They are the "
+                "developer's own words, unchanged.",
         "body": (),
     },
 )
@@ -253,14 +279,37 @@ UI = {
                        "railings above, and lamp posts, young trees and "
                        "on-plot parking along the paved street."),
     "key_plan_subtitle": "What stands either side of the gate",
-    "alt_key_plan": ("Key plan: Lake Tree Avenue on Waghodia Main Road, between "
-                     "Parul University and Sumandeep Vidyapeeth, with landmarks "
-                     "either side pinned along the road. Not to scale. "
-                     "Approximate distances by road: Parul University, "
-                     "Sumandeep Vidyapeeth and Dhiraj Hospital 2.3 km; Avalon "
-                     "World School 2.5 km; Waghodia GIDC 4.2 km; L&T Knowledge "
-                     "City 8.8 km; Nimeta Garden 9.7 km; AATAPI Wonderland "
-                     "10.1 km; Vadodara Airport 13.8 km."),
+    "alt_key_plan": ("Key plan: Lake Tree Avenue on Waghodia Main Road. "
+                     "Towards Vadodara city: Avalon World School 4.5 km, "
+                     "Dhiraj Hospital 3.9 km, Sumandeep Vidyapeeth 3.9 km and "
+                     "L&T Knowledge City 11.6 km. Towards Waghodia: Parul "
+                     "University 2.7 km, Waghodia GIDC 5.5 km and Waghodia "
+                     "town 7.5 km. Further out: Waghodia Chowkdi 10.6 km, "
+                     "Nimeta Garden 13.6 km, AATAPI Wonderland 17.2 km and "
+                     "Vadodara Airport 17.6 km. Approximate distances by "
+                     "road. Not to scale."),
+    # Under the key plan: which way the road runs, then every pin with its
+    # distance and drive time, then how those were measured and how to
+    # drive in. The drawing shows where; this says how long.
+    "key_plan_caption": ("Towards Vadodara city, Waghodia Chowkdi and NH 48 "
+                         "on one side; towards Waghodia and Halol on the "
+                         "other. Not to scale."),
+    "distances_heading": "Distances from the gate",
+    "distance_value": "about {km} km, {min} min drive",
+    "distances_note": ("Road distances from the site gate, with Google "
+                       "Maps' drive times, read in October 2026. Traffic "
+                       "changes the times, so open the directions before "
+                       "you leave."),
+    "getting_here": "Getting here",
+    "getting_here_body": ("From Vadodara city, take Waghodia Road out past "
+                          "Waghodia Chowkdi. From Ahmedabad, Anand or "
+                          "Bharuch, leave NH 48 at Waghodia Chowkdi and head "
+                          "towards Waghodia."),
+    # Closes the disclaimers, as it closes every page of the website: the
+    # pictures sell, so the reader is told what kind of picture they are.
+    "pictures_note": ("Pictures of the houses and the campus are artist's "
+                      "impressions. Floor plan dimensions are from the "
+                      "developer's issued drawings."),
     "alt_plan_sheet": "{caption} plan for plots {range}, with room dimensions",
 }
 

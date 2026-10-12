@@ -386,7 +386,8 @@ class TestKeyPlan(unittest.TestCase):
                             r'aria-label="([^"]+)"', self.html)
         self.assertEqual(len(labels), 3, labels)
         for label in labels:
-            for figure in ("2.3", "2.5", "4.2", "8.8", "9.7", "10.1", "13.8"):
+            for figure in ("2.7", "3.9", "4.5", "5.5", "7.5", "10.6", "11.6",
+                           "13.6", "17.2", "17.6"):
                 self.assertIn(figure, label, f"{figure} is missing: {label}")
 
     def test_the_drawing_sits_inside_the_location_section(self):
@@ -394,12 +395,19 @@ class TestKeyPlan(unittest.TestCase):
         section = self.html.split('id="en-location"')[1].split("</section>")[0]
         self.assertIn("shot-key-plan", section)
 
-    def test_nothing_repeats_the_drawing_under_it(self):
-        # The distance list and the location schedule both said what the
-        # artwork draws. Neither comes back.
-        section = self.html.split('id="en-location"')[1].split("</section>")[0]
-        self.assertNotIn('class="distances"', section)
-        self.assertNotIn('class="schedule"', section)
+    def test_the_distances_are_set_under_the_drawing(self):
+        # The drawing shows where; the list under it says how long, which
+        # the artwork does not, in every language.
+        for code in copy.LOCALES:
+            section = self.html.split(f'id="{code}-location"')[1] \
+                .split("</section>")[0]
+            below = section.split("shot-key-plan")[1]
+            self.assertIn('class="distances"', below, code)
+            for place, value in content.distance_rows(copy.for_locale(code)):
+                self.assertIn(html.escape(place), below, f"{code} {place}")
+                self.assertIn(html.escape(value), below, f"{code} {value}")
+            self.assertIn(html.escape(
+                copy.for_locale(code).UI["getting_here_body"]), below, code)
 
     def test_the_drawing_is_called_not_to_scale(self):
         # The artwork prints "NOT TO SCALE" itself; the alt text says so

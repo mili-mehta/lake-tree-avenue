@@ -25,7 +25,7 @@ def _unligate(text: str) -> str:
 
 # cover, project, the front elevation, then a page per floor per type,
 # then layout, the plot schedule facing it, specs, location (prose and the
-# key plan together), contact
+# key plan together), the distances under the key plan, contact
 ELEVATION_PAGE = 2
 PLAN_PAGES = {"A": (3, 4), "B": (5, 6)}
 GROUND_PAGE = {key: pages[0] for key, pages in PLAN_PAGES.items()}
@@ -35,9 +35,10 @@ LAYOUT_PAGE = 7
 PLOT_AREAS_PAGE = 8
 SPECS_PAGE = 9
 LOCATION_PAGE = 10
-CONTACT_PAGE = 11
+DISTANCES_PAGE = 11
+CONTACT_PAGE = 12
 # The disclaimers close the brochure: they qualify every page before them.
-DISCLAIMERS_PAGE = 12
+DISCLAIMERS_PAGE = 13
 
 
 class TestPdf(unittest.TestCase):
@@ -52,11 +53,11 @@ class TestPdf(unittest.TestCase):
     def tearDownClass(cls):
         os.unlink(cls.path)
 
-    def test_thirteen_pages_a4_landscape(self):
+    def test_fourteen_pages_a4_landscape(self):
         # Both types take a page per floor. Two sheets sharing one page
         # shrink to roughly half the width, and at that size the room
         # dimensions printed inside them stop being readable.
-        self.assertEqual(self.doc.page_count, 13)
+        self.assertEqual(self.doc.page_count, 14)
         for page in self.doc:
             self.assertAlmostEqual(page.rect.width, 842.0, places=0)
             self.assertAlmostEqual(page.rect.height, 595.0, places=0)
@@ -382,12 +383,12 @@ class TestEveryLanguage(unittest.TestCase):
             doc.close()
             os.unlink(cls.paths[locale])
 
-    def test_every_language_builds_the_same_thirteen_pages(self):
+    def test_every_language_builds_the_same_fourteen_pages(self):
         # A LayoutOverflow during the build is the real assertion here:
         # Devanagari runs longer than English, and a box tuned for the
         # English would drop the tail of a sentence.
         for locale, doc in self.docs.items():
-            self.assertEqual(doc.page_count, 13, locale)
+            self.assertEqual(doc.page_count, 14, locale)
 
     def test_every_indic_character_has_a_glyph(self):
         # A font missing one conjunct still renders the line, with a hole
@@ -603,9 +604,26 @@ class TestKeyPlan(unittest.TestCase):
                       "Waghodia GIDC", "L&T Knowledge City", "Nimeta Garden",
                       "AATAPI Wonderland", "Vadodara Airport"):
             self.assertNotIn(place, text, f"{place} repeats beside the drawing")
-        for figure in ("2.3", "2.5", "4.2", "8.8", "9.7", "10.1", "13.8"):
+        for figure in ("4.5", "5.5", "7.5", "10.6", "11.6", "13.6", "17.6"):
             self.assertNotIn(f"{figure} km", text,
                              f"{figure} km is set as text beside the drawing")
+
+    def test_the_page_after_the_drawing_lists_every_distance(self):
+        # What the drawing cannot draw -- the drive times -- faces it.
+        for locale in copy.LOCALES:
+            doc = build_pdf.build_doc(locale)
+            text = _unligate(" ".join(doc[DISTANCES_PAGE].get_text().split()))
+            # Shaped Devanagari and Gujarati do not extract back to the
+            # words that were set, so those documents are held to their
+            # figures, which are Latin in all three.
+            for key, km, minutes in content.DISTANCES:
+                self.assertIn(f"{km} ", text, f"{locale} {key}")
+                self.assertIn(f" {minutes} ", text, f"{locale} {key}")
+            if locale == "en":
+                for place, value in content.distance_rows(EN):
+                    self.assertIn(place, text, place)
+                    self.assertIn(value, text, value)
+            doc.close()
 
 
 class TestDeterminism(unittest.TestCase):

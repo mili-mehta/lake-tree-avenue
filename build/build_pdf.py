@@ -707,6 +707,55 @@ def _location(doc, art):
     return page
 
 
+def _distances(doc, art):
+    """What sits under the key plan: how far each pin is, and how to come.
+
+    The facing page to the drawing rather than a strip squeezed beneath
+    it, because the drawing's labels are sized to its width and every
+    point of depth taken from it is width it loses. The drawing shows
+    where; this page says how long -- drive times are not in the artwork
+    -- and adds the railway station, which is not on it.
+    """
+    page = _page(doc)
+    words = art["words"]
+    ui = words.UI
+    # Optically centred, like the other pages that are words only.
+    y = _heading(page, ui["distances_heading"], ui["key_plan_caption"],
+                 y=110.0, width=PAGE_SIZE[0] - 2 * MARGIN)
+
+    rows = content.distance_rows(words)
+    gap = 40.0
+    col_w = (PAGE_SIZE[0] - 2 * MARGIN - gap) / 2
+    half = (len(rows) + 1) // 2
+    bottom = y
+    for col, chunk in enumerate((rows[:half], rows[half:])):
+        bottom = max(bottom, _schedule(page, chunk,
+                                       MARGIN + col * (col_w + gap), y,
+                                       col_w, label_w=190.0, pitch=24.0))
+
+    note = fitz.Rect(MARGIN, bottom + 8, PAGE_SIZE[0] - MARGIN, bottom + 40)
+    spare = _text(page, note, ui["distances_note"], font=SANS, size=8.5,
+                  color=INK_SOFT, leading=1.4)
+    if spare < 0:
+        raise LayoutOverflow("the distances note does not fit")
+    y = note.y0 + (note.height - spare) + 26
+
+    # How to drive in, and the address to drive to, side by side.
+    for i, (head, text) in enumerate(((ui["getting_here"],
+                                       ui["getting_here_body"]),
+                                      (ui["site"], words.ADDRESS))):
+        x = MARGIN + i * (col_w + gap)
+        _line(page, x, y, x + col_w)
+        _text(page, fitz.Rect(x, y + 7, x + col_w, y + 24), head,
+              font=SANS_BOLD, size=8.5, color=INK_SOFT)
+        box = fitz.Rect(x, y + 24, x + col_w, FOOTER_TOP - 14)
+        if _text(page, box, text, font=SERIF, size=10.5, color=INK,
+                 leading=1.4) < 0:
+            raise LayoutOverflow(f"{head!r} does not fit under the distances")
+    _footer(page, words)
+    return page
+
+
 def _contact(doc, art):
     page = _page(doc)
     s = art["sections"]["contact"]
@@ -798,6 +847,7 @@ def _disclaimers(doc, art):
     items = words.DISCLAIMERS
     col_w = (PAGE_SIZE[0] - 2 * MARGIN - 40) / 2
     half = (len(items) + 1) // 2  # four clauses, then three
+    bottom = y
     for col, chunk in enumerate((items[:half], items[half:])):
         x = MARGIN + col * (col_w + 40)
         cy = y
@@ -817,6 +867,15 @@ def _disclaimers(doc, art):
                 raise LayoutOverflow(
                     f"disclaimer {number} ends at {cy:.0f} pt, past the "
                     f"footer at {FOOTER_TOP:.0f} pt")
+        bottom = max(bottom, cy)
+
+    # Not a clause -- the developer issued seven -- but the note the
+    # website closes every page with, about what the pictures are.
+    note = fitz.Rect(MARGIN, bottom + 6, PAGE_SIZE[0] - MARGIN,
+                     FOOTER_TOP - 10)
+    if _text(page, note, words.UI["pictures_note"], font=SANS, size=8.5,
+             color=INK_SOFT, leading=1.4) < 0:
+        raise LayoutOverflow("the pictures note does not fit")
     _footer(page, words)
     return page
 
@@ -839,7 +898,8 @@ def build_doc(locale: str = copy.DEFAULT) -> fitz.Document:
     doc = fitz.open()
     with _using(locale):
         for builder in (_cover, _project, _elevation, _plans,
-                        _layout, _plot_areas, _specs, _location, _contact,
+                        _layout, _plot_areas, _specs, _location, _distances,
+                        _contact,
                         _disclaimers):
             builder(doc, art)
     doc.set_metadata({

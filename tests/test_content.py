@@ -267,11 +267,21 @@ class TestLocation(unittest.TestCase):
         self.assertIn("Sumandeep", blob)
 
     def test_maps_url_carries_the_exact_site_coordinates(self):
-        # The pin the owner shared, to the digit. A text search would let
-        # Google choose a point on Waghodia Road; this does not.
-        self.assertEqual(content.SITE_LATLNG, "22.2918248,73.3433214")
+        # The gate, to the digit, as laketreeavenue.com publishes it. A
+        # text search would let Google choose a point on Waghodia Road;
+        # this does not.
+        self.assertEqual(content.SITE_LATLNG, "22.2921125,73.3455469")
         self.assertEqual(content.PROJECT["site_latlng"], content.SITE_LATLNG)
-        self.assertIn("22.2918248%2C73.3433214", content.PROJECT["maps_url"])
+        self.assertIn("22.2921125%2C73.3455469", content.PROJECT["maps_url"])
+
+    def test_every_distance_has_a_name_in_every_language(self):
+        keys = {key for key, _, _ in content.DISTANCES}
+        for code in copy.LOCALES:
+            self.assertEqual(set(copy.for_locale(code).LANDMARKS), keys, code)
+
+    def test_distances_run_nearest_first(self):
+        kms = [float(km) for _, km, _ in content.DISTANCES]
+        self.assertEqual(kms, sorted(kms))
 
     def test_maps_url_opens_directions_not_a_search(self):
         # api=1 "dir" is the documented universal form: the Maps app takes

@@ -255,6 +255,23 @@ section { padding: 84px 0; }
    a banded section, so it needs no negative margins -- it is simply not
    wrapped. The vertical rules separate it from the prose either side. */
 .key-plan-figure { margin: 26px 0 0; }
+.key-plan-caption { font-family: var(--sans); font-size: 0.84rem;
+  color: var(--ink-soft); text-align: center; margin: 12px auto 0;
+  max-width: 820px; }
+
+/* Under the drawing: every pin with its distance and drive time. The
+   artwork says where; this says how long, which the artwork does not. */
+.distances { margin: 0; display: grid; grid-template-columns: 1fr;
+  column-gap: 40px; }
+.distances div { display: flex; justify-content: space-between;
+  align-items: baseline; gap: 16px; padding: 10px 0;
+  border-bottom: 1px solid var(--rule); }
+.distances dt { color: var(--ink); }
+.distances dd { margin: 0; font-family: var(--sans); font-size: 0.9rem;
+  color: var(--terra-deep); white-space: nowrap; }
+.getting-here { margin-top: 26px; }
+.getting-here h3 { margin-bottom: 6px; font-family: var(--sans);
+  font-size: 0.92rem; font-weight: 600; color: var(--ink-soft); }
 
 /* ---------- specifications ---------- */
 .spec-list { margin: 0; }
@@ -328,6 +345,7 @@ footer img { width: 128px; margin-bottom: 18px; }
   .plot-areas { grid-template-columns: repeat(3, 1fr); gap: 34px; }
   .spec-list div { grid-template-columns: 210px 1fr; gap: 26px; }
   .amenities { columns: 2; }
+  .distances { grid-template-columns: repeat(3, 1fr); }
   .contact-grid { grid-template-columns: repeat(3, 1fr); gap: 44px; }
   /* Seven clauses in one column is a wall; two columns keeps the block
      one screen deep without shrinking the type. */
@@ -843,13 +861,22 @@ def _document(locale: str, words) -> str:
     out.append('<div class="key-plan-figure">'
                + _shot("key-plan", ui["alt_key_plan"]) + "</div>")
     out.append('<div class="wrap">')
+    out.append(f'<p class="key-plan-caption">{_esc(ui["key_plan_caption"])}'
+               "</p>")
 
-    # Nothing is set under the drawing. The distances and the landmarks
-    # either side of the gate are in the artwork, and repeating them as a
-    # list and a table only said the same thing three times. What a
-    # screen reader and a search engine need is in the image's own
-    # accessible name, which is where it now lives in all three
-    # languages.
+    # Under the drawing, what it cannot draw: the drive time to each pin,
+    # the one place a family arriving by train asks about first, how the
+    # figures were taken, and which way to come in.
+    out.append(f'<div class="dim"><span>{_esc(ui["distances_heading"])}'
+               "</span></div>")
+    out.append('<dl class="distances">')
+    out.extend(f"<div><dt>{_esc(place)}</dt><dd>{_esc(value)}</dd></div>"
+               for place, value in content.distance_rows(words))
+    out.append("</dl>")
+    out.append(f'<p class="plot-note">{_esc(ui["distances_note"])}</p>')
+    out.append(f'<div class="measure getting-here">'
+               f'<h3>{_esc(ui["getting_here"])}</h3>'
+               f'<p>{_esc(ui["getting_here_body"])}</p></div>')
     out.append('<div class="actions" style="margin-top:30px">')
     out.append(f'<a class="btn btn-quiet" href="{p["maps_url"]}" '
                f'target="_blank" rel="noopener">{_icon("pin")}'
@@ -927,6 +954,7 @@ def _document(locale: str, words) -> str:
     out.append('<ol class="disclaimers">')
     out.extend(f"<li>{_esc(d)}</li>" for d in words.DISCLAIMERS)
     out.append("</ol>")
+    out.append(f'<p class="plot-note">{_esc(ui["pictures_note"])}</p>')
     out.append("</div></section>")
 
     # footer

@@ -16,6 +16,9 @@ LATIN_OK = (
     "Office", "info@laketreeavenue.com", "@laketreeavenue",
     "laketreeavenue.com",
     "AC", "PDF", "Tremix",
+    # Read in Latin on every signboard on the road: the industrial estate
+    # is "GIDC", never spelled out, and the cameras are "CCTV".
+    "GIDC", "CCTV",
     # The two abbreviations in the disclaimers. A buyer in Vadodara reads
     # both in Latin on every bill and receipt they already hold, and a
     # transliterated "जी.एस.टी." would be a tax nobody recognises.
@@ -82,7 +85,7 @@ class TestCopyParity(unittest.TestCase):
             self.assertEqual(len(words.PROJECT_SCHEDULE),
                              len(copy.for_locale("en").PROJECT_SCHEDULE), code)
             self.assertEqual(len(words.SPEC_GROUPS), 9, code)
-            self.assertEqual(len(words.AMENITIES), 6, code)
+            self.assertEqual(len(words.AMENITIES), 9, code)
 
     def test_every_language_carries_all_seven_disclaimers(self):
         # The one block of copy here that is a legal statement. A clause

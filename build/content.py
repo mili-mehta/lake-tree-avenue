@@ -9,13 +9,12 @@ No I/O, no formatting decisions — renderers consume these values.
 import re
 from urllib.parse import quote
 
-# The site pin, read straight off the owner's own Google Maps share link
-# (https://maps.app.goo.gl/Lpv23NqKy2tFcg7Q8), which resolves to
-# maps.google.com/?q=22.2918248,73.3433214. Coordinates, not a place name:
-# a text search would leave Google to pick a stretch of Waghodia Road, and
-# there are several it could pick. The short link itself is never printed --
-# goo.gl links are redirects that can rot, and the numbers cannot.
-SITE_LATLNG = "22.2918248,73.3433214"
+# The site pin, as laketreeavenue.com publishes it: the gate, which every
+# distance in DISTANCES is measured from. It moved off the owner's earlier
+# share link (22.2918248,73.3433214), which sat about 230 m west of the
+# gate. Coordinates, not a place name: a text search would leave Google to
+# pick a stretch of Waghodia Road, and there are several it could pick.
+SITE_LATLNG = "22.2921125,73.3455469"
 
 PROJECT = {
     "name": "Lake Tree Avenue",
@@ -142,6 +141,37 @@ AREA_UNIT = "sq ft"
 # them so the reader finds them without comparing forty-eight numbers by
 # eye.
 LARGE_PLOT_SQFT = 715
+
+
+# What the key plan pins, and how far each one is: road distance in km and
+# Google Maps' drive time in minutes from the site gate, read off in
+# October 2026 -- the figures laketreeavenue.com publishes. Nearest first,
+# the order a buyer asks in. The railway station is not on the drawing; it
+# is here because a family coming in by train asks it first.
+#
+# Keyed, not named: the name is the one part of a row that changes with
+# the reader's language, and lives in each locale's LANDMARKS.
+DISTANCES = (
+    ("parul", "2.7", 6),
+    ("sumandeep", "3.9", 8),
+    ("dhiraj", "3.9", 8),
+    ("avalon", "4.5", 9),
+    ("gidc", "5.5", 12),
+    ("waghodia_town", "7.5", 17),
+    ("waghodia_chowkdi", "10.6", 18),
+    ("lnt", "11.6", 22),
+    ("nimeta", "13.6", 23),
+    ("aatapi", "17.2", 27),
+    ("airport", "17.6", 38),
+    ("railway", "19", 50),
+)
+
+
+def distance_rows(words) -> tuple[tuple[str, str], ...]:
+    """The distance table in the reader's language: (place, how far)."""
+    return tuple((words.LANDMARKS[key],
+                  words.UI["distance_value"].format(km=km, min=minutes))
+                 for key, km, minutes in DISTANCES)
 
 
 UNIT_TYPES = {
