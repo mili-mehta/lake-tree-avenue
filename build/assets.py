@@ -23,6 +23,10 @@ SITE_PLAN_SRC = os.path.join(ROOT, "images",
                              "lake-tree-avenue-Layout Plan.png")
 KEY_PLAN_SRC = os.path.join(ROOT, "images",
                             "lake-tree-avenue-key-plan-waghodia-main-road.jpg")
+# The master plan: Lake Tree Avenue and Aarvanta Aangan off one 12 m road
+# from Waghodia Main Road. An aerial render, drawn 16:9 with its own signs.
+MASTER_PLAN_SRC = os.path.join(
+    ROOT, "images", "lake-tree-avenue-aarvanta-aangan-master-plan.jpg")
 
 # The floor plans as issued: one portrait sheet per floor per unit type,
 # each showing a single townhouse. Ground floor first, the order a visitor
@@ -190,6 +194,23 @@ def key_plan_jpeg(width: int = 1672, quality: int = 85) -> bytes:
     img = Image.open(KEY_PLAN_SRC).convert("RGB")
     ratio = width / img.width
     img = img.resize((width, max(1, round(img.height * ratio))), Image.LANCZOS)
+    return _encode(img, "JPEG", quality=quality, optimize=True,
+                   progressive=True)
+
+
+def master_plan_jpeg(width: int = 1600, quality: int = 84) -> bytes:
+    """The master plan render, whole.
+
+    Like the key plan it is finished artwork with its own lettering --
+    road widths, the two project signs, the north arrow -- so it is never
+    cropped: a crop would cut a label. The source is 1600 px across, which
+    is the default, so it is re-encoded rather than resized.
+    """
+    img = Image.open(MASTER_PLAN_SRC).convert("RGB")
+    if img.width != width:
+        ratio = width / img.width
+        img = img.resize((width, max(1, round(img.height * ratio))),
+                         Image.LANCZOS)
     return _encode(img, "JPEG", quality=quality, optimize=True,
                    progressive=True)
 

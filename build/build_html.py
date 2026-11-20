@@ -273,6 +273,62 @@ section { padding: 84px 0; }
 .getting-here h3 { margin-bottom: 6px; font-family: var(--sans);
   font-size: 0.92rem; font-weight: 600; color: var(--ink-soft); }
 
+/* ---------- the master plan ----------
+   The community a Lake Tree Avenue buyer lives in. Set in the
+   brochure's own palette -- white ground, sand and terracotta -- so it
+   reads as one more page of the same brochure. White rather than sand
+   because the location band after it is sand; the render, edge to edge
+   at its head, is what parts it from the white specifications before.
+
+   Built to be skimmed rather than read: the render leads edge to edge,
+   the two paragraphs sit side by side, the seven points are cards with a
+   glyph each, and the two projects are two tiles. On a phone the cards
+   become one row that swipes sideways, so seven points cost one card's
+   depth of scroll instead of seven. */
+.mp { background: #ffffff; padding-top: 0; }
+.mp .hd { margin-top: 56px; }
+.mp-intro { display: grid; grid-template-columns: 1fr; gap: 0 46px;
+  max-width: 980px; }
+.mp-figure { margin: 0 0 6px; }
+.mp .dim span { white-space: normal; text-align: center; max-width: 30em; }
+.mp-features {
+  list-style: none; padding: 4px 28px 14px; margin: 28px -28px 0;
+  display: grid; grid-auto-flow: column; grid-auto-columns: 80%; gap: 14px;
+  overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding: 0 28px;
+  -webkit-overflow-scrolling: touch; scrollbar-width: thin;
+}
+.mp-features:focus-visible { outline: 2px solid var(--terra); outline-offset: -2px; }
+.mp-features li {
+  scroll-snap-align: start; padding: 22px 22px 24px;
+  border: 1px solid var(--rule); border-radius: 2px; background: #fbf7f0;
+  display: flex; flex-direction: column; gap: 14px;
+}
+.mp-features .ico { color: var(--terra); }
+.mp-features h3 { font-family: var(--sans); font-weight: 600;
+  font-size: 0.98rem; color: var(--terra-deep); letter-spacing: 0;
+  margin-bottom: 6px; }
+.mp-features p { margin: 0; color: var(--ink-soft); font-size: 0.95rem;
+  line-height: 1.55; }
+.mp-projects { margin-top: 56px; text-align: center; }
+.mp-projects h3 { font-size: clamp(1.35rem, 2.6vw, 1.85rem);
+  max-width: 26em; margin: 0 auto; line-height: 1.25; }
+.mp-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  max-width: 640px; margin: 28px auto 0; }
+.mp-tile { border: 1px solid var(--rule); border-radius: 2px;
+  padding: 20px 12px 18px; display: flex; flex-direction: column;
+  align-items: center; gap: 4px; background: #ffffff; }
+/* This is Lake Tree Avenue's brochure, so its own tile carries the
+   brochure's colour; the neighbour's stays quiet. */
+.mp-tile-own { border: 1.5px solid var(--terra); background: #f3eadb; }
+.mp-fig { font-family: var(--serif); font-size: clamp(1.9rem, 5vw, 2.6rem);
+  line-height: 1; color: var(--terra-deep); font-weight: 400; }
+.mp-name { font-family: var(--sans); font-weight: 600; font-size: 0.92rem;
+  color: var(--ink); margin-top: 6px; }
+.mp-kind { font-size: 0.9rem; color: var(--ink-soft); }
+.mp-close { max-width: 34em; margin: 28px auto 0; color: var(--ink-soft); }
+.mp-sign { font-style: italic; font-size: 1.3rem; color: var(--terra-deep);
+  margin-top: 14px; }
+
 /* ---------- specifications ---------- */
 .spec-list { margin: 0; }
 .spec-list div {
@@ -343,6 +399,16 @@ footer img { width: 128px; margin-bottom: 18px; }
   .plan-grid-stacked .plan-sheets { grid-template-columns: 1fr 1fr; gap: 26px; }
   /* Sixteen rows a column, the way the schedule was issued. */
   .plot-areas { grid-template-columns: repeat(3, 1fr); gap: 34px; }
+  /* Off the phone the swipe row becomes a grid: three across, and the
+     seventh -- the land kept for later -- runs the full width beneath as
+     a closing strip rather than sitting alone in a third of a row. */
+  .mp-intro { grid-template-columns: 1fr 1fr; }
+  .mp-features { grid-auto-flow: row; grid-template-columns: repeat(3, 1fr);
+    grid-auto-columns: auto; overflow: visible; margin: 30px 0 0;
+    padding: 0; gap: 18px; }
+  .mp-features li:last-child { grid-column: 1 / -1; flex-direction: row;
+    align-items: center; gap: 20px; }
+  .mp-tiles { gap: 18px; }
   .spec-list div { grid-template-columns: 210px 1fr; gap: 26px; }
   .amenities { columns: 2; }
   .distances { grid-template-columns: repeat(3, 1fr); }
@@ -511,6 +577,42 @@ ICONS = {
         _STROKE,
         '<path d="M3.5 5.5h17v13h-17z"/><path d="m4 6.5 8 6 8-6"/>'
     ),
+    # The master plan's seven points, one glyph each, on the same grid.
+    "gate": (
+        _STROKE,
+        '<path d="M4.5 21V6.5h3V21"/><path d="M16.5 21V6.5h3V21"/>'
+        '<path d="M7.5 9.5c2.6-2.6 6.4-2.6 9 0"/><path d="M2.5 21h19"/>'
+    ),
+    "road": (
+        _STROKE,
+        '<path d="M8.5 3 5 21"/><path d="M15.5 3 19 21"/>'
+        '<path d="M12 4.5v2.5M12 10.5v3M12 17v3"/>'
+    ),
+    "homes": (
+        _STROKE,
+        '<path d="M2.5 20.5v-9l5-4.5 5 4.5v9z"/>'
+        '<path d="M12.5 9.2 16.5 5.5l5 4.5v10.5h-9"/>'
+        '<path d="M6 20.5v-4h3v4"/>'
+    ),
+    "door": (
+        _STROKE,
+        '<path d="M6 21V3.5h12V21"/><path d="M3 21h18"/>'
+        '<path d="M14.6 12.2v.1"/>'
+    ),
+    "lanes": (
+        _STROKE,
+        '<path d="M9 3v18M15 3v18"/><path d="M3 9h6M15 9h6M3 15h6M15 15h6"/>'
+    ),
+    "leaf": (
+        _STROKE,
+        '<path d="M5 19.5C4.5 11 9.5 5.5 20 4.5c-.5 10-5.5 15.5-15 15z"/>'
+        '<path d="M5 19.5c3.5-5 7-8 11-10.5"/>'
+    ),
+    "plot": (
+        _STROKE,
+        '<path d="M3.5 3.5h17v17h-17z" stroke-dasharray="2.6 2.4"/>'
+        '<path d="M12 8.5v7M8.5 12h7"/>'
+    ),
     "globe": (
         _STROKE,
         '<circle cx="12" cy="12" r="9"/><path d="M3.3 9.2h17.4"/>'
@@ -542,6 +644,7 @@ def _imagery() -> dict:
         "front-view": (assets.front_view_jpeg(1600), "image/jpeg"),
         "site-plan": (assets.site_plan_jpeg(1500), "image/jpeg"),
         "key-plan": (assets.key_plan_jpeg(), "image/jpeg"),
+        "master-plan": (assets.master_plan_jpeg(), "image/jpeg"),
         "logo": (assets.logo_png(260), "image/png"),
     }
     for unit_key in content.UNIT_TYPES:
@@ -709,6 +812,59 @@ def _plan_pane(locale: str, key: str, words) -> str:
     )
 
 
+# One glyph per master plan feature, in the order every language lists
+# them. A glyph is not a word, so it lives with the renderer, not the copy.
+MASTERPLAN_ICONS = ("gate", "road", "homes", "door", "lanes", "leaf", "plot")
+
+
+def _masterplan(locale: str, words) -> str:
+    """The master plan: two homes, one location, as a page to skim.
+
+    The section's words, the render edge to edge, the seven points as
+    cards, then the two projects as tiles. Lake Tree Avenue's tile is
+    the marked one, since this is its brochure.
+    """
+    s = {sec["id"]: sec for sec in words.SECTIONS}["masterplan"]
+    plan = words.MASTERPLAN
+    out = [f'<section class="mp" id="{locale}-masterplan">']
+    # The render leads, edge to edge, as the section's hero. Unwrapped,
+    # like the key plan: it is lettered relative to its own width, so page
+    # width is what keeps its road labels legible.
+    out.append('<div class="mp-figure">'
+               + _shot("master-plan", plan["alt"]) + "</div>")
+    out.append('<div class="wrap">')
+    out.append('<div class="hd measure">')
+    out.append(f"<h2>{_esc(s['title'])}</h2>")
+    out.append(f'<p class="lead">{_esc(s["lead"])}</p></div>')
+    out.append('<div class="mp-intro">')
+    out.extend(f"<p>{_esc(b)}</p>" for b in s["body"])
+    out.append("</div>")
+    out.append(f'<div class="dim"><span>{_esc(plan["heading"])}</span></div>')
+    # A scrolling region on a phone, so it is focusable and named: a
+    # keyboard user has to be able to reach the cards past the first.
+    out.append(f'<ol class="mp-features" tabindex="0" '
+               f'aria-label="{_esc(plan["heading"])}">')
+    for icon, (title, text) in zip(MASTERPLAN_ICONS, plan["features"],
+                                   strict=True):
+        out.append(f"<li>{_icon(icon, 30)}<div><h3>{_esc(title)}</h3>"
+                   f"<p>{_esc(text)}</p></div></li>")
+    out.append("</ol>")
+    out.append('<div class="mp-projects">')
+    out.append(f"<h3>{_esc(plan['projects_title'])}</h3>")
+    out.append('<div class="mp-tiles">')
+    for name, figure, kind in plan["projects"]:
+        own = " mp-tile-own" if name == content.PROJECT["name"] else ""
+        out.append(f'<div class="mp-tile{own}">'
+                   f'<span class="mp-fig">{_esc(figure)}</span>'
+                   f'<span class="mp-name" lang="en">{_esc(name)}</span>'
+                   f'<span class="mp-kind">{_esc(kind)}</span></div>')
+    out.append("</div>")
+    out.append(f'<p class="mp-close">{_esc(plan["projects_body"])}</p>')
+    out.append(f'<p class="mp-sign">{_esc(plan["sign_off"])}</p>')
+    out.append("</div></div></section>")
+    return "".join(out)
+
+
 PDF_NAMES = {"en": "Lake-Tree-Avenue-eBrochure.pdf",
              "hi": "Lake-Tree-Avenue-eBrochure-hi.pdf",
              "gu": "Lake-Tree-Avenue-eBrochure-gu.pdf"}
@@ -837,6 +993,10 @@ def _document(locale: str, words) -> str:
     out.extend(f"<li>{_esc(a)}</li>" for a in words.AMENITIES)
     out.append("</ul>")
     out.append("</div></section>")
+
+    # The master plan: the community around Lake Tree Avenue, once the
+    # reader knows the homes themselves -- see content.SECTION_IDS.
+    out.append(_masterplan(locale, words))
 
     # location
     out.append(f'<section class="band" id="{sid("location")}"><div class="wrap">')

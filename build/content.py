@@ -44,8 +44,15 @@ PROJECT = {
 
 # The sections, in the order both renderers lay them out. The titles and
 # the prose are per language; only the running order is shared.
-SECTION_IDS = ("cover", "project", "plans", "layout", "specs", "location",
-               "contact", "disclaimers")
+#
+# The master plan comes after everything about Lake Tree Avenue itself --
+# the homes, the plans, the site, the specifications -- and before the
+# location. The brochure sells Lake Tree Avenue; the master plan shows
+# the community a buyer there lives in, on land shared with Aarvanta
+# Aangan along one 12 m road. Shown any earlier, a reader could take the
+# brochure to be selling the 3BHK duplexes.
+SECTION_IDS = ("cover", "project", "plans", "layout", "specs", "masterplan",
+               "location", "contact", "disclaimers")
 
 # Internal only. The owner credits the firm, never the individuals, so these
 # names must never reach a buyer-facing artefact. Bare surnames are listed too

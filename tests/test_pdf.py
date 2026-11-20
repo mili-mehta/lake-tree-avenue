@@ -24,8 +24,9 @@ def _unligate(text: str) -> str:
     return text
 
 # cover, project, the front elevation, then a page per floor per type,
-# then layout, the plot schedule facing it, specs, location (prose and the
-# key plan together), the distances under the key plan, contact
+# then layout, the plot schedule facing it, specs, the master plan,
+# location (prose and the key plan together), the distances under the key
+# plan, contact
 ELEVATION_PAGE = 2
 PLAN_PAGES = {"A": (3, 4), "B": (5, 6)}
 GROUND_PAGE = {key: pages[0] for key, pages in PLAN_PAGES.items()}
@@ -34,11 +35,12 @@ ALL_PLAN_PAGES = [i for pages in PLAN_PAGES.values() for i in pages]
 LAYOUT_PAGE = 7
 PLOT_AREAS_PAGE = 8
 SPECS_PAGE = 9
-LOCATION_PAGE = 10
-DISTANCES_PAGE = 11
-CONTACT_PAGE = 12
+MASTERPLAN_PAGE = 10
+LOCATION_PAGE = 11
+DISTANCES_PAGE = 12
+CONTACT_PAGE = 13
 # The disclaimers close the brochure: they qualify every page before them.
-DISCLAIMERS_PAGE = 13
+DISCLAIMERS_PAGE = 14
 
 
 class TestPdf(unittest.TestCase):
@@ -53,11 +55,11 @@ class TestPdf(unittest.TestCase):
     def tearDownClass(cls):
         os.unlink(cls.path)
 
-    def test_fourteen_pages_a4_landscape(self):
+    def test_fifteen_pages_a4_landscape(self):
         # Both types take a page per floor. Two sheets sharing one page
         # shrink to roughly half the width, and at that size the room
         # dimensions printed inside them stop being readable.
-        self.assertEqual(self.doc.page_count, 14)
+        self.assertEqual(self.doc.page_count, 15)
         for page in self.doc:
             self.assertAlmostEqual(page.rect.width, 842.0, places=0)
             self.assertAlmostEqual(page.rect.height, 595.0, places=0)
@@ -383,12 +385,39 @@ class TestEveryLanguage(unittest.TestCase):
             doc.close()
             os.unlink(cls.paths[locale])
 
-    def test_every_language_builds_the_same_fourteen_pages(self):
+    def test_every_language_builds_the_same_fifteen_pages(self):
         # A LayoutOverflow during the build is the real assertion here:
         # Devanagari runs longer than English, and a box tuned for the
         # English would drop the tail of a sentence.
         for locale, doc in self.docs.items():
-            self.assertEqual(doc.page_count, 14, locale)
+            self.assertEqual(doc.page_count, 15, locale)
+
+    def test_the_master_plan_page_carries_every_word_in_every_language(self):
+        # Every feature title and sentence, both tiles and the sign-off,
+        # on the page that carries the render -- in the language of the
+        # file, not the English.
+        for locale, doc in self.docs.items():
+            plan = copy.for_locale(locale).MASTERPLAN
+            page = doc[MASTERPLAN_PAGE]
+            text = _unligate(" ".join(page.get_text().split()))
+            wanted = [plan["heading"], plan["projects_title"],
+                      plan["projects_body"], plan["sign_off"]]
+            for title, body in plan["features"]:
+                wanted += [title, body]
+            for name, figure, kind in plan["projects"]:
+                wanted += [name, figure, kind]
+            # Extracted Devanagari and Gujarati come back in glyph order
+            # from the subset fonts, not as the strings that were set, so
+            # those files are checked by their Latin -- the names and the
+            # home types -- and the English is checked word for word. A
+            # Hindi or Gujarati block that overflowed fails the build.
+            if locale != "en":
+                wanted = [w for name, figure, _ in plan["projects"]
+                          for w in (name, figure)]
+            for phrase in wanted:
+                self.assertIn(" ".join(phrase.split()), text,
+                              f"{locale}: {phrase!r} is not on the page")
+            self.assertEqual(len(page.get_images()), 1, locale)
 
     def test_every_indic_character_has_a_glyph(self):
         # A font missing one conjunct still renders the line, with a hole

@@ -15,6 +15,9 @@ LATIN_OK = (
     "Alkapuri", "Halol", "Ramkrishna Chambers", "BPC Road", "Regd",
     "Office", "info@laketreeavenue.com", "@laketreeavenue",
     "laketreeavenue.com",
+    # The sister scheme on the master plan. Its name is a brand, set in
+    # Latin on its own tile beside "Lake Tree Avenue" in every language.
+    "Aarvanta Aangan",
     "AC", "PDF", "Tremix",
     # Read in Latin on every signboard on the road: the industrial estate
     # is "GIDC", never spelled out, and the cameras are "CCTV".
@@ -86,6 +89,20 @@ class TestCopyParity(unittest.TestCase):
                              len(copy.for_locale("en").PROJECT_SCHEDULE), code)
             self.assertEqual(len(words.SPEC_GROUPS), 9, code)
             self.assertEqual(len(words.AMENITIES), 9, code)
+
+    def test_the_master_plan_has_the_same_shape_everywhere(self):
+        # Seven features, two projects, in every language: a feature that
+        # dropped out of the Hindi would be a selling point the Hindi
+        # reader was never told.
+        for code in copy.LOCALES:
+            plan = copy.for_locale(code).MASTERPLAN
+            self.assertEqual(len(plan["features"]), 7, code)
+            for title, text in plan["features"]:
+                self.assertTrue(title and text, code)
+            self.assertEqual(
+                [(name, kind) for name, kind, _ in plan["projects"]],
+                [("Lake Tree Avenue", "2BHK"), ("Aarvanta Aangan", "3BHK")],
+                code)
 
     def test_every_language_carries_all_seven_disclaimers(self):
         # The one block of copy here that is a legal statement. A clause

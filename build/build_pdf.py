@@ -373,6 +373,125 @@ def _project(doc, art):
     return page
 
 
+# The master plan page. The render takes the top left at its own 16:9, the
+# section's words stand beside it, and the bottom band carries the seven
+# points in three columns with the two projects on a sand panel at the end.
+MP_IMAGE_W = 404.0
+MP_GAP = 26.0
+MP_PANEL_W = 214.0
+MP_FEATURE_COLS = 3
+
+
+def _masterplan(doc, art):
+    """Lake Tree Avenue and Aarvanta Aangan, on one page.
+
+    Every word the web section carries, so a reader sent the file is told
+    what a reader of the link is told. Each block is measured as it is set
+    and the next starts under it, because the Gujarati and the Hindi run
+    longer than the English; the build fails rather than clip a sentence.
+    """
+    page = _page(doc)
+    words = art["words"]
+    s = art["sections"]["masterplan"]
+    plan = words.MASTERPLAN
+
+    img_rect = _place_image(
+        page, art["master_plan"],
+        fitz.Rect(MARGIN, MARGIN, MARGIN + MP_IMAGE_W,
+                  MARGIN + MP_IMAGE_W * 9 / 16))
+
+    tx = img_rect.x1 + MP_GAP
+    tw = PAGE_SIZE[0] - MARGIN - tx
+    # _heading is pinned to the left margin, so the column beside the
+    # render sets its own title and lead, measured the same way.
+    box = fitz.Rect(tx, MARGIN - 4, tx + tw, MARGIN + 90)
+    spare = _text(page, box, s["title"], font=SERIF, size=21, color=INK,
+                  leading=1.12)
+    if spare < 0:
+        raise LayoutOverflow(f"master plan title {s['title']!r} does not fit")
+    y = box.y0 + box.height - spare + 6
+    for text, font, size, color, gap in (
+            (s["lead"], SERIF, 11, INK_SOFT, 10),
+            ("\n\n".join(s["body"]), SERIF, 9.3, INK, 0)):
+        box = fitz.Rect(tx, y, tx + tw, img_rect.y1 + 40)
+        spare = _text(page, box, text, font=font, size=size, color=color,
+                      leading=1.4)
+        if spare < 0:
+            raise LayoutOverflow("the master plan prose overflows beside "
+                                 "the render")
+        y = box.y0 + box.height - spare + gap
+
+    # The bottom band: features left, the two projects right.
+    top = max(img_rect.y1, y) + 16
+    panel_x = PAGE_SIZE[0] - MARGIN - MP_PANEL_W
+    fw = panel_x - MP_GAP - MARGIN
+    _text(page, fitz.Rect(MARGIN, top, MARGIN + fw, top + 16),
+          plan["heading"], font=SANS_BOLD, size=9, color=TERRA_DEEP)
+    y = top + 20
+    gap = 16.0
+    col_w = (fw - gap * (MP_FEATURE_COLS - 1)) / MP_FEATURE_COLS
+    features = plan["features"]
+    for row in range(0, len(features), MP_FEATURE_COLS):
+        _line(page, MARGIN, y, MARGIN + fw)
+        bottom = y
+        for col, (title, text) in enumerate(
+                features[row:row + MP_FEATURE_COLS]):
+            x = MARGIN + col * (col_w + gap)
+            cy = y + 7
+            for text_, font, color in ((title, SANS_BOLD, TERRA_DEEP),
+                                       (text, SERIF, INK)):
+                box = fitz.Rect(x, cy, x + col_w, FOOTER_TOP - 6)
+                spare = _text(page, box, text_, font=font, size=8.6,
+                              color=color, leading=1.32)
+                if spare < 0:
+                    raise LayoutOverflow(f"master plan feature {title!r} "
+                                         "overflows")
+                cy = box.y0 + box.height - spare + 2
+            bottom = max(bottom, cy)
+        y = bottom + 8
+        if y > FOOTER_TOP - 6:
+            raise LayoutOverflow(f"master plan features end at {y:.0f} pt, "
+                                 f"past the footer at {FOOTER_TOP:.0f} pt")
+
+    # The two projects, on sand, Lake Tree Avenue's tile outlined.
+    panel = fitz.Rect(panel_x, top, PAGE_SIZE[0] - MARGIN, FOOTER_TOP - 12)
+    _fill(page, panel, SAND)
+    px, pw = panel.x0 + 14, panel.width - 28
+    box = fitz.Rect(px, panel.y0 + 12, px + pw, panel.y1)
+    spare = _text(page, box, plan["projects_title"], font=SERIF, size=11.5,
+                  color=INK, leading=1.25)
+    py = box.y0 + box.height - spare + 10
+    tile_w = (pw - 8) / 2
+    for i, (name, figure, kind) in enumerate(plan["projects"]):
+        tx0 = px + i * (tile_w + 8)
+        tile = fitz.Rect(tx0, py, tx0 + tile_w, py + 58)
+        _fill(page, tile, PAPER)
+        own = name == content.PROJECT["name"]
+        page.draw_rect(tile, color=TERRA if own else RULE,
+                       width=1.1 if own else 0.7)
+        for dy, text, font, size, color, h in (
+                (6, figure, SERIF, 17, TERRA_DEEP, 22),
+                (29, name, SANS_BOLD, 7.4, INK, 12),
+                (41, kind, SERIF, 7.8, INK_SOFT, 14)):
+            if _text(page, fitz.Rect(tile.x0 + 2, tile.y0 + dy,
+                                     tile.x1 - 2, tile.y0 + dy + h),
+                     text, font=font, size=size, color=color,
+                     align=1) < 0:
+                raise LayoutOverflow(f"master plan tile {text!r} overflows")
+    py += 58 + 12
+    for text, font, size, color, gap in (
+            (plan["projects_body"], SERIF, 8.6, INK_SOFT, 8),
+            (plan["sign_off"], SERIF_BOLD, 10, TERRA_DEEP, 0)):
+        box = fitz.Rect(px, py, px + pw, panel.y1 - 8)
+        spare = _text(page, box, text, font=font, size=size, color=color,
+                      leading=1.38)
+        if spare < 0:
+            raise LayoutOverflow("the master plan projects panel overflows")
+        py = box.y0 + box.height - spare + gap
+    _footer(page, words)
+    return page
+
+
 # The elevation plate: a sand band carrying the line, the picture bleeding
 # to the left, right and bottom edges under it. The depth is what the band
 # leaves, and the picture is cropped to exactly that rather than fitted
@@ -888,6 +1007,7 @@ def build_doc(locale: str = copy.DEFAULT) -> fitz.Document:
         "front": assets.front_view_jpeg(1800),
         "site": assets.site_plan_jpeg(1500),
         "key_plan": assets.key_plan_jpeg(),
+        "master_plan": assets.master_plan_jpeg(),
         "sections": {s["id"]: s for s in words.SECTIONS},
         "words": words,
         "locale": locale,
@@ -898,7 +1018,8 @@ def build_doc(locale: str = copy.DEFAULT) -> fitz.Document:
     doc = fitz.open()
     with _using(locale):
         for builder in (_cover, _project, _elevation, _plans,
-                        _layout, _plot_areas, _specs, _location, _distances,
+                        _layout, _plot_areas, _specs, _masterplan,
+                        _location, _distances,
                         _contact,
                         _disclaimers):
             builder(doc, art)

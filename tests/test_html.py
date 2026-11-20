@@ -431,6 +431,37 @@ class TestLanguageToggle(unittest.TestCase):
                 self.assertIn(f'id="{code}-{section}"', doc,
                               f"{code} is missing the {section} section")
 
+    def test_the_master_plan_sits_between_specs_and_location(self):
+        # The brochure sells Lake Tree Avenue: the reader sees the homes,
+        # the plans, the site and the specifications first, and only then
+        # the community they sit in.
+        for code in copy.LOCALES:
+            doc = build_html.doc(self.markup, code)
+            self.assertLess(doc.index(f'id="{code}-specs"'),
+                            doc.index(f'id="{code}-masterplan"'), code)
+            self.assertLess(doc.index(f'id="{code}-masterplan"'),
+                            doc.index(f'id="{code}-location"'), code)
+
+    def test_the_master_plan_carries_its_render_and_every_point(self):
+        # The render leads the section, once per language, named in that
+        # language; the seven points and both projects follow it.
+        self.assertEqual(self.html.count(".shot-master-plan {"), 1)
+        for code in copy.LOCALES:
+            plan = copy.for_locale(code).MASTERPLAN
+            doc = build_html.doc(self.markup, code)
+            section = doc.split(f'id="{code}-masterplan"')[1] \
+                .split("</section>")[0]
+            self.assertLess(section.index("shot-master-plan"),
+                            section.index("<h2>"), code)
+            self.assertIn(html.escape(plan["alt"]), section, code)
+            self.assertEqual(section.count("<li>"), 7, code)
+            for title, text in plan["features"]:
+                self.assertIn(html.escape(title), section, code)
+                self.assertIn(html.escape(text), section, code)
+            self.assertEqual(len(re.findall(r'class="mp-tile[ "]', section)),
+                             2, code)
+            self.assertEqual(section.count("mp-tile-own"), 1, code)
+
     def test_exactly_one_document_is_visible_per_choice(self):
         # A broken selector either stacks all three languages on top of
         # each other or hides every one of them and ships a blank page.

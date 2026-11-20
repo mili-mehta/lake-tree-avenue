@@ -192,6 +192,23 @@ SECTIONS = (
         "body": (),
     },
     {
+        # The master plan, as the owner issued it: Lake Tree Avenue and
+        # Aarvanta Aangan on one stretch of Waghodia Main Road. The rest of
+        # its copy is in MASTERPLAN below.
+        "id": "masterplan",
+        "title": "Two dream homes. One great location.",
+        "lead": "Your dream home deserves the right surroundings.",
+        "body": (
+            "A home is not just about four walls. It is about the comfort of "
+            "your family, the convenience of your location and the place you "
+            "choose to build your future.",
+            "Welcome to a thoughtfully planned residential destination on "
+            "Waghodia Main Road, Vadodara, bringing together two beautiful "
+            "housing projects with easy access, wide roads and green "
+            "surroundings.",
+        ),
+    },
+    {
         "id": "location",
         "title": "Between Parul and Sumandeep",
         "lead": "Parul University about 2.7 km one way, Sumandeep "
@@ -217,6 +234,58 @@ SECTIONS = (
         "body": (),
     },
 )
+
+# The master plan page, after the section's title, lead and two paragraphs.
+# Seven features, each a short title and one sentence, in the order the
+# owner issued them: they read as a walk in from the main road gate. Then
+# the two projects side by side, the line that sends the reader on, and the
+# sign-off.
+#
+# Each project is (name, home type, how the owner describes it). The names
+# stay Latin in every language, like "Lake Tree Avenue" everywhere else.
+MASTERPLAN = {
+    "heading": "A master plan designed around you",
+    "features": (
+        ("A Grand Welcome",
+         "A beautifully planned main entrance from the 24-metre-wide "
+         "Waghodia Main Road."),
+        ("Easy Access, Every Day",
+         "A spacious 12-metre-wide central road connects both residential "
+         "projects."),
+        ("Your Home, Your Choice",
+         "Choose a comfortable 2BHK home at Lake Tree Avenue or a spacious "
+         "3BHK duplex at Aarvanta Aangan."),
+        ("Your Own Entrance",
+         "Both projects have separate entrances, giving each its own "
+         "identity."),
+        ("More Room to Move",
+         "Well-planned 7.5-metre-wide internal roads for convenient movement "
+         "within the residential areas."),
+        ("A Touch of Green",
+         "Beautifully planned green spaces add freshness and charm to the "
+         "surroundings."),
+        ("Planned for Tomorrow",
+         "Dedicated land for future development forms part of the larger "
+         "master plan."),
+    ),
+    "projects_title": "Two projects. Two lifestyles. One place to call home.",
+    "projects": (
+        ("Lake Tree Avenue", "2BHK", "Comfortable homes"),
+        ("Aarvanta Aangan", "3BHK", "Spacious duplexes"),
+    ),
+    "projects_body": ("Whether you are buying your first home, looking for "
+                      "more space for your growing family or planning your "
+                      "next move, discover a home that feels just right for "
+                      "you."),
+    "sign_off": "Your next chapter begins here.",
+    "alt": ("Master plan on Waghodia Main Road, Vadodara: the main entrance "
+            "on the 24 m wide Waghodia Main Road opens onto a 12 m internal "
+            "road. Along it, each behind its own gate, are Aarvanta Aangan, "
+            "3BHK duplexes, and Lake Tree Avenue, 2BHK homes, both laid out "
+            "on 7.5 m internal roads with landscaped gardens. Three plots "
+            "marked for future development lie along the same road. "
+            "Artist's impression."),
+}
 
 UI = {
     # The connector inside a measured range: 703 to 1041 sq ft. The numbers
