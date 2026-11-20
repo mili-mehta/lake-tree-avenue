@@ -1157,9 +1157,10 @@ def render_html() -> str:
     out.append('<meta name="description" content="'
                + _esc(default.META_DESCRIPTION) + '">')
     # One canonical URL for a file that is also handed around offline: a
-    # copy opened from a phone's downloads still points back at the site.
+    # copy opened from a phone's downloads, or the copy still on
+    # workers.dev, points back at the brochure's own address on the site.
     out.append(f'<link rel="canonical" href="'
-               f'{content.PROJECT["website_url"]}">')
+               f'{content.PROJECT["brochure_url"]}">')
     out.append(f"<style>{CSS}\n{_image_css(imagery)}\n{_locale_css()}</style>")
     out.append("</head><body>")
     out.append(IG_GRADIENT)

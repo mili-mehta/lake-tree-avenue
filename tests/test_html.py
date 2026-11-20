@@ -73,7 +73,9 @@ class TestHtml(unittest.TestCase):
                 or url.startswith("https://www.google.com/maps/")
                 or url in (content.PROJECT["instagram_url"],
                            content.PROJECT["facebook_url"],
-                           content.PROJECT["website_url"]),
+                           content.PROJECT["website_url"],
+                           # the canonical link: the page's own address
+                           content.PROJECT["brochure_url"]),
                 f"external subresource: {url}",
             )
 
@@ -92,7 +94,7 @@ class TestHtml(unittest.TestCase):
         self.assertIn(f'href="{content.PROJECT["website_url"]}"', self.html)
         self.assertIn(content.PROJECT["website_display"], self.markup)
         self.assertIn(f'<link rel="canonical" '
-                      f'href="{content.PROJECT["website_url"]}">', self.html)
+                      f'href="{content.PROJECT["brochure_url"]}">', self.html)
 
     def test_no_per_plot_links(self):
         # The plots are near-identical, so 48 separate enquiry links were

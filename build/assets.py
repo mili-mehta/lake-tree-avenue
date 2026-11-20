@@ -25,8 +25,7 @@ KEY_PLAN_SRC = os.path.join(ROOT, "images",
                             "lake-tree-avenue-key-plan-waghodia-main-road.jpg")
 # The master plan: Lake Tree Avenue and Aarvanta Aangan off one 12 m road
 # from Waghodia Main Road. An aerial render, drawn 16:9 with its own signs.
-MASTER_PLAN_SRC = os.path.join(
-    ROOT, "images", "lake-tree-avenue-aarvanta-aangan-master-plan.jpg")
+MASTER_PLAN_SRC = os.path.join(ROOT, "images", "lake-tree-avenue-master-plan.jpg")
 
 # The floor plans as issued: one portrait sheet per floor per unit type,
 # each showing a single townhouse. Ground floor first, the order a visitor

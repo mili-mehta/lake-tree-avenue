@@ -27,6 +27,11 @@ PROJECT = {
     # carries the scheme a browser and a PDF viewer both need.
     "website_display": "laketreeavenue.com",
     "website_url": "https://laketreeavenue.com",
+    # Where this brochure itself lives on that domain: the website serves
+    # the built page and the three PDFs from its /brochure/ folder
+    # (tools/publish_website.py puts them there). The address a buyer is
+    # sent, and the page's canonical URL.
+    "brochure_url": "https://laketreeavenue.com/brochure/",
     # One handle on both networks, so a caption, a footer or a hoarding can
     # print it once and be right for either.
     "social_handle": "@laketreeavenue",
